@@ -25,18 +25,12 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* Only login in top-right */}
             <Link
               href="/auth/login"
               className="text-sm text-neutral-300 hover:text-white"
             >
               Log in
-            </Link>
-
-            <Link
-              href="/auth/signup"
-              className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-black hover:bg-emerald-400"
-            >
-              Join Now
             </Link>
           </div>
         </div>
@@ -64,11 +58,17 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
+                {/* Main CTA with two-line text inside button (style B) */}
                 <Link
                   href="/auth/signup"
-                  className="rounded-md bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-emerald-400"
+                  className="rounded-md bg-emerald-500 px-5 py-3 text-sm font-semibold text-black hover:bg-emerald-400 inline-flex flex-col items-center justify-center"
                 >
-                  Start using TradieFlow
+                  <span className="text-sm font-semibold">
+                    Start using TradieFlow
+                  </span>
+                  <span className="mt-0.5 text-[11px] font-normal text-emerald-950/90">
+                    Free 14-day trial → then $99.99/m
+                  </span>
                 </Link>
 
                 <Link
@@ -286,27 +286,6 @@ export default function LandingPage() {
                   No bloated menus. Just the tools you need: quotes, jobs,
                   invoices, clients and clear money stats.
                 </p>
-              </div>
-            </div>
-
-            <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-              <div className="text-sm text-neutral-300">
-                Ready to actually feel on top of your work?
-              </div>
-              <div className="flex gap-3">
-                <Link
-                  href="/auth/signup"
-                  className="rounded-md bg-emerald-500 px-5 py-2 text-sm font-semibold text-black hover:bg-emerald-400"
-                >
-                  Join Now
-                </Link>
-
-                <Link
-                  href="/auth/login"
-                  className="rounded-md border border-neutral-700 px-5 py-2 text-sm text-neutral-200 hover:border-neutral-500"
-                >
-                  Log in
-                </Link>
               </div>
             </div>
           </div>
