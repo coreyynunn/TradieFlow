@@ -40,6 +40,7 @@ export default function ClientsPage() {
       const { data, error } = await supabase
         .from("clients")
         .select("id, name, phone, email")
+        .eq("user_id", user.id) // 🔥 only this user's clients
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -77,7 +78,7 @@ export default function ClientsPage() {
     const { data, error } = await supabase
       .from("clients")
       .insert({
-        user_id: user.id,
+        user_id: user.id, // 🔥 owner of this client
         name: name.trim(),
         phone: phone.trim() || null,
         email: email.trim() || null,
