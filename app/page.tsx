@@ -25,18 +25,20 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {/* WAS /login → now /dashboard */}
+            {/* Correct login route */}
             <Link
-              href="/dashboard"
+              href="/auth/login"
               className="text-sm text-neutral-300 hover:text-white"
             >
               Log in
             </Link>
+
+            {/* Correct signup route */}
             <Link
-              href="/dashboard"
+              href="/auth/signup"
               className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-black hover:bg-emerald-400"
             >
-              Open App
+              Join Now
             </Link>
           </div>
         </div>
@@ -64,12 +66,14 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
+                {/* Use signup for CTA */}
                 <Link
-                  href="/dashboard"
+                  href="/auth/signup"
                   className="rounded-md bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-emerald-400"
                 >
                   Start using TradieFlow
                 </Link>
+
                 <Link
                   href="#features"
                   className="text-sm text-neutral-300 hover:text-white"
@@ -105,6 +109,7 @@ export default function LandingPage() {
                       From 12 invoices this month
                     </div>
                   </div>
+
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Money owing</div>
                     <div className="mt-1 text-lg font-semibold text-amber-400">
@@ -114,6 +119,7 @@ export default function LandingPage() {
                       4 invoices overdue
                     </div>
                   </div>
+
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Quotes out</div>
                     <div className="mt-1 text-lg font-semibold text-sky-400">
@@ -123,6 +129,7 @@ export default function LandingPage() {
                       Convert to jobs in one tap
                     </div>
                   </div>
+
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Active jobs</div>
                     <div className="mt-1 text-lg font-semibold text-purple-400">
@@ -198,14 +205,14 @@ export default function LandingPage() {
               </div>
               <div className="flex gap-3">
                 <Link
-                  href="/dashboard"
+                  href="/auth/signup"
                   className="rounded-md bg-emerald-500 px-5 py-2 text-sm font-semibold text-black hover:bg-emerald-400"
                 >
-                  Open TradieFlow
+                  Join Now
                 </Link>
-                {/* WAS /login → now /dashboard */}
+
                 <Link
-                  href="/dashboard"
+                  href="/auth/login"
                   className="rounded-md border border-neutral-700 px-5 py-2 text-sm text-neutral-200 hover:border-neutral-500"
                 >
                   Log in
@@ -219,9 +226,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-neutral-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 text-xs text-neutral-500">
-          <span>
-            © {new Date().getFullYear()} TradieFlow. All rights reserved.
-          </span>
+          <span>© {new Date().getFullYear()} TradieFlow. All rights reserved.</span>
           <span>Built for Aussie tradies who want to level up.</span>
         </div>
       </footer>
