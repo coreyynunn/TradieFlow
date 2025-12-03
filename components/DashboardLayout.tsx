@@ -9,10 +9,14 @@ type DashboardLayoutProps = {
   children: ReactNode;
 };
 
+// TODO: change this to YOUR real admin login email
+const ADMIN_EMAIL = "coreyynunn02@outlook.com";
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loadingUser, setLoadingUser] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -25,6 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return;
       }
 
+      setIsAdmin(user.email === ADMIN_EMAIL);
       setLoadingUser(false);
     };
 
@@ -44,7 +49,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { label: "Clients", href: "/clients" },
     { label: "Jobs", href: "/jobs" },
     { label: "Invoices", href: "/invoices" },
-    { label: "Subscribers", href: "/admin", isAdmin: true }, // always show for now
   ];
 
   return (
@@ -69,11 +73,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Nav */}
         <nav className="flex-1 space-y-1 text-sm">
           {navItems.map((item) => {
-            const active =
-              item.href === "/admin"
-                ? pathname === "/admin"
-                : pathname?.startsWith(item.href);
-
+            const active = pathname?.startsWith(item.href);
             return (
               <Link
                 key={item.href}
@@ -86,14 +86,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 ].join(" ")}
               >
                 <span>{item.label}</span>
-                {item.href === "/admin" && (
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-[2px] text-[10px] text-emerald-300 border border-emerald-500/40">
-                    Admin
-                  </span>
-                )}
               </Link>
             );
           })}
+
+          {/* Admin-only Subscribers tab */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={[
+                "mt-3 flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
+                pathname === "/admin"
+                  ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                  : "text-neutral-300 hover:bg-neutral-900 hover:text-white",
+              ].join(" ")}
+            >
+              <span>Subscribers</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-[2px] text-[10px] text-emerald-300 border border-emerald-500/40">
+                Admin
+              </span>
+            </Link>
+          )}
 
           {/* Settings (soon) */}
           <div className="mt-4 rounded-md px-3 py-2 text-sm text-neutral-600 cursor-not-allowed">
@@ -115,6 +128,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div className="mt-3 text-[11px] text-neutral-500">
             v0.1 · internal dev build
+            <div className="mt-1">
+              Logged in as{" "}
+              <span className="text-neutral-300">
+                {isAdmin ? "Admin" : "User"}
+              </span>
+            </div>
           </div>
         </div>
       </aside>

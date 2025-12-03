@@ -16,6 +16,9 @@ type Subscription = {
   plan_tier: PlanTier;
 };
 
+// MUST match the email in DashboardLayout
+const ADMIN_EMAIL = "coreyynunn02@outlook.com";
+
 export default function AdminPage() {
   const router = useRouter();
   const [subs, setSubs] = useState<Subscription[]>([]);
@@ -30,6 +33,11 @@ export default function AdminPage() {
 
       if (!user) {
         router.replace("/auth/login");
+        return;
+      }
+
+      if (user.email !== ADMIN_EMAIL) {
+        router.replace("/dashboard");
         return;
       }
 
@@ -78,11 +86,10 @@ export default function AdminPage() {
     0
   );
 
-  // Fake 6-month trend using current MRR just to give a SaaS-style chart
   const trendMonths = 6;
   const monthlyTrend = Array.from({ length: trendMonths }).map((_, idx) => {
     const monthIndex = trendMonths - idx;
-    const factor = 0.6 + idx * 0.08; // make it look like it grows
+    const factor = 0.6 + idx * 0.08;
     return {
       label: `M-${monthIndex}`,
       value: Math.round(totalMrr * factor),
@@ -229,7 +236,7 @@ export default function AdminPage() {
             <div className="text-sm font-medium text-neutral-100">
               Subscribers
             </div>
-            <div className="text-[11px] text-neutral-400">
+          <div className="text-[11px] text-neutral-400">
               {subs.length} total records
             </div>
           </div>
