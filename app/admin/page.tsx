@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import DashboardLayout from "@/components/DashboardLayout";
 
 type Subscription = {
   id: string;
@@ -12,19 +13,16 @@ type Subscription = {
   started_at: string | null;
 };
 
+const ADMIN_EMAIL = "coreyynunn02@outlook.com"; // same as in DashboardLayout
+
 export default function AdminPage() {
   const router = useRouter();
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // CHANGE THIS TO YOUR REAL ADMIN EMAIL
-  const ADMIN_EMAIL = "coreyynunn02@outlook.com";
-
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
-
       const {
         data: { user },
         error,
@@ -65,193 +63,179 @@ export default function AdminPage() {
   );
   const arr = mrr * 12;
 
-  // Very simple fake 6-month revenue trend based on current MRR
   const monthlyData = Array.from({ length: 6 }).map((_, i) => ({
     label: `M-${6 - i}`,
-    value: Math.round(mrr * (0.7 + i * 0.06)), // just to make bars look different
+    value: Math.round(mrr * (0.7 + i * 0.06)),
   }));
   const maxValue =
     monthlyData.length > 0
       ? Math.max(...monthlyData.map((m) => m.value))
       : 0;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-50 flex items-center justify-center">
+  return (
+    <DashboardLayout>
+      {loading ? (
         <div className="text-sm text-neutral-400">Loading admin stats…</div>
-      </div>
-    );
-  }
-
-  if (errorMsg) {
-    return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-50 flex items-center justify-center">
+      ) : errorMsg ? (
         <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           Error loading admin data: {errorMsg}
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-50">
-      <div className="mx-auto max-w-6xl px-4 py-6">
-        <header className="flex items-center justify-between mb-6">
-          <div>
+      ) : (
+        <div className="space-y-6">
+          <header>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Admin – Subscriptions
+              Subscribers
             </h1>
             <p className="text-xs text-neutral-400 mt-1">
-              Only visible to the admin account. Shows who&apos;s subscribed
-              and how much recurring money the app is bringing in.
+              Admin-only view of who&apos;s subscribed and the recurring money
+              TradieFlow is bringing in.
             </p>
-          </div>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="text-xs text-neutral-300 hover:text-white"
-          >
-            ← Back to dashboard
-          </button>
-        </header>
+          </header>
 
-        {/* Top stats */}
-        <div className="grid gap-4 md:grid-cols-3 mb-8">
+          {/* Top stats */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+              <div className="text-xs text-neutral-400">
+                Active subscribers
+              </div>
+              <div className="mt-2 text-3xl font-semibold text-emerald-400">
+                {activeCount}
+              </div>
+              <div className="mt-1 text-[11px] text-neutral-500">
+                People currently paying for TradieFlow
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+              <div className="text-xs text-neutral-400">MRR</div>
+              <div className="mt-2 text-3xl font-semibold text-sky-400">
+                ${mrr.toFixed(2)}
+              </div>
+              <div className="mt-1 text-[11px] text-neutral-500">
+                Monthly recurring revenue
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+              <div className="text-xs text-neutral-400">ARR (run rate)</div>
+              <div className="mt-2 text-3xl font-semibold text-amber-400">
+                ${arr.toFixed(2)}
+              </div>
+              <div className="mt-1 text-[11px] text-neutral-500">
+                If nothing changed for the next 12 months
+              </div>
+            </div>
+          </div>
+
+          {/* Simple revenue chart */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <div className="text-xs text-neutral-400">Active subscribers</div>
-            <div className="mt-2 text-3xl font-semibold text-emerald-400">
-              {activeCount}
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-medium text-neutral-100">
+                  Revenue trend (demo)
+                </div>
+                <div className="text-[11px] text-neutral-400">
+                  Last 6 months based on current MRR – wire to real history
+                  later.
+                </div>
+              </div>
             </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              People currently paying for TradieFlow
-            </div>
+
+            {monthlyData.length === 0 || maxValue === 0 ? (
+              <div className="text-xs text-neutral-400">
+                No data yet – add some subscriptions into the table.
+              </div>
+            ) : (
+              <div className="mt-4 flex items-end gap-3 h-40">
+                {monthlyData.map((m) => {
+                  const height = Math.max(
+                    8,
+                    (m.value / maxValue) * 100
+                  );
+                  return (
+                    <div
+                      key={m.label}
+                      className="flex-1 flex flex-col items-center justify-end gap-1"
+                    >
+                      <div
+                        className="w-full rounded-t-md bg-emerald-500/80"
+                        style={{ height: `${height}%` }}
+                      />
+                      <div className="text-[10px] text-neutral-400">
+                        {m.label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
+          {/* Subscribers table */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <div className="text-xs text-neutral-400">MRR</div>
-            <div className="mt-2 text-3xl font-semibold text-sky-400">
-              ${mrr.toFixed(2)}
-            </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              Monthly recurring revenue at ${activeSubs[0]?.plan_amount ?? 99.99}
-              /m
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-            <div className="text-xs text-neutral-400">ARR (run rate)</div>
-            <div className="mt-2 text-3xl font-semibold text-amber-400">
-              ${arr.toFixed(2)}
-            </div>
-            <div className="mt-1 text-[11px] text-neutral-500">
-              If nothing changed for the next 12 months
-            </div>
-          </div>
-        </div>
-
-        {/* Simple revenue chart */}
-        <div className="mb-8 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
+            <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-medium text-neutral-100">
-                Revenue trend (fake for now)
+                Subscribers
               </div>
               <div className="text-[11px] text-neutral-400">
-                Last 6 months, based on current MRR – replace with real history
-                later.
+                {subs.length} total records
               </div>
             </div>
-          </div>
 
-          {monthlyData.length === 0 ? (
-            <div className="text-xs text-neutral-400">
-              No data yet – add some subscriptions into the table.
-            </div>
-          ) : (
-            <div className="mt-4 flex items-end gap-3 h-40">
-              {monthlyData.map((m) => {
-                const height =
-                  maxValue > 0 ? Math.max(8, (m.value / maxValue) * 100) : 0;
-                return (
-                  <div
-                    key={m.label}
-                    className="flex-1 flex flex-col items-center justify-end gap-1"
-                  >
-                    <div
-                      className="w-full rounded-t-md bg-emerald-500/80"
-                      style={{ height: `${height}%` }}
-                    />
-                    <div className="text-[10px] text-neutral-400">
-                      {m.label}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Subscribers table */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-medium text-neutral-100">
-              Subscribers
-            </div>
-            <div className="text-[11px] text-neutral-400">
-              {subs.length} total records
-            </div>
-          </div>
-
-          {subs.length === 0 ? (
-            <div className="text-xs text-neutral-400">
-              No subscriptions found yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-[11px] text-neutral-400 border-b border-neutral-800">
-                    <th className="py-2 pr-4">Email</th>
-                    <th className="py-2 pr-4">Status</th>
-                    <th className="py-2 pr-4">Plan</th>
-                    <th className="py-2 pr-4">Started</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {subs.map((s) => (
-                    <tr
-                      key={s.id}
-                      className="border-b border-neutral-850/40 last:border-none"
-                    >
-                      <td className="py-2 pr-4 text-neutral-100">
-                        {s.email || "—"}
-                      </td>
-                      <td className="py-2 pr-4 capitalize">
-                        <span
-                          className={
-                            s.status === "active"
-                              ? "text-emerald-400"
-                              : "text-neutral-400"
-                          }
-                        >
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4">
-                        ${((s.plan_amount ?? 99.99) as number).toFixed(2)}/m
-                      </td>
-                      <td className="py-2 pr-4 text-neutral-400">
-                        {s.started_at
-                          ? new Date(s.started_at).toLocaleDateString()
-                          : "—"}
-                      </td>
+            {subs.length === 0 ? (
+              <div className="text-xs text-neutral-400">
+                No subscriptions found yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-[11px] text-neutral-400 border-b border-neutral-800">
+                      <th className="py-2 pr-4">Email</th>
+                      <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">Plan</th>
+                      <th className="py-2 pr-4">Started</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {subs.map((s) => (
+                      <tr
+                        key={s.id}
+                        className="border-b border-neutral-800 last:border-none"
+                      >
+                        <td className="py-2 pr-4 text-neutral-100">
+                          {s.email || "—"}
+                        </td>
+                        <td className="py-2 pr-4 capitalize">
+                          <span
+                            className={
+                              s.status === "active"
+                                ? "text-emerald-400"
+                                : "text-neutral-400"
+                            }
+                          >
+                            {s.status}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4">
+                          ${((s.plan_amount ?? 99.99) as number).toFixed(2)}/m
+                        </td>
+                        <td className="py-2 pr-4 text-neutral-400">
+                          {s.started_at
+                            ? new Date(
+                                s.started_at
+                              ).toLocaleDateString()
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </DashboardLayout>
   );
 }
