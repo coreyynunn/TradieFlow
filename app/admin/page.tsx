@@ -31,10 +31,6 @@ export default function AdminPage() {
         return;
       }
 
-      // Admin check is removed because you want admin tab always visible
-      // But users will still be blocked by redirect here
-      // Only YOU will be able to stay
-
       const { data, error: subsError } = await supabase
         .from("subscriptions")
         .select("id, email, status, plan_amount, started_at, plan_tier")
@@ -60,19 +56,57 @@ export default function AdminPage() {
   );
   const arr = mrr * 12;
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="text-sm text-neutral-400">Loading admin stats…</div>
+      </DashboardLayout>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <DashboardLayout>
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          Error loading admin data: {errorMsg}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold">Subscribers</h1>
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Subscribers
+          </h1>
+          <p className="text-xs text-neutral-400 mt-1">
+            See who&apos;s on Starter vs Pro and what recurring money TradieFlow
+            is bringing in.
+          </p>
+        </header>
 
         {/* Top Stats */}
         <div className="grid gap-4 md:grid-cols-3">
-          <StatCard label="Active subscribers" value={activeCount} color="emerald" />
-          <StatCard label="MRR" value={`$${mrr.toFixed(2)}`} color="sky" />
-          <StatCard label="ARR (run rate)" value={`$${arr.toFixed(2)}`} color="amber" />
+          <StatCard
+            label="Active subscribers"
+            value={activeCount}
+            color="emerald"
+          />
+          <StatCard
+            label="MRR"
+            value={`$${mrr.toFixed(2)}`}
+            color="sky"
+          />
+          <StatCard
+            label="ARR (run rate)"
+            value={`$${arr.toFixed(2)}`}
+            color="amber"
+          />
         </div>
 
-        {/* Subscriber Table */}
+        {/* Subscribers Table */}
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm font-medium text-neutral-100">
@@ -101,10 +135,16 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {subs.map((s) => (
-                    <tr key={s.id} className="border-b border-neutral-800 last:border-none">
-                      <td className="py-2 pr-4 text-neutral-100">{s.email || "—"}</td>
+                    <tr
+                      key={s.id}
+                      className="border-b border-neutral-800 last:border-none"
+                    >
+                      {/* Email */}
+                      <td className="py-2 pr-4 text-neutral-100">
+                        {s.email || "—"}
+                      </td>
 
-                      {/* Plan Badge */}
+                      {/* Plan badge */}
                       <td className="py-2 pr-4">
                         {s.plan_tier === "starter" && (
                           <span className="px-2 py-[2px] text-[11px] rounded-md bg-blue-600/20 text-blue-300 border border-blue-500/40">
@@ -141,7 +181,7 @@ export default function AdminPage() {
                         </span>
                       </td>
 
-                      {/* Started */}
+                      {/* Started date */}
                       <td className="py-2 pr-4 text-neutral-400">
                         {s.started_at
                           ? new Date(s.started_at).toLocaleDateString()
