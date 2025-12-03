@@ -1,160 +1,147 @@
 "use client";
 
-import { ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "../lib/supabaseClient";
+import { ReactNode, useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
-interface DashboardLayoutProps {
+type DashboardLayoutProps = {
   children: ReactNode;
-}
+};
+
+// CHANGE THIS TO YOUR REAL ADMIN EMAIL
+const ADMIN_EMAIL = "coreyynunn20@outlook.com";
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  const pathname = usePathname();
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/auth/login");
+  useEffect(() => {
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      setIsAdmin(user.email === ADMIN_EMAIL);
+      setLoadingUser(false);
+    };
+
+    loadUser();
+  }, [router]);
+
+  if (loadingUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#050816] text-neutral-100">
+        <div className="text-sm text-neutral-400">Loading your account…</div>
+      </div>
+    );
   }
 
+  const navItems = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Clients", href: "/clients" },
+    { label: "Jobs", href: "/jobs" },
+    { label: "Invoices", href: "/invoices" },
+  ];
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        backgroundColor: "#020617", // slate-950
-        color: "#e5e7eb", // slate-200
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
-    >
+    <div className="min-h-screen bg-[#050816] text-neutral-50 flex">
       {/* Sidebar */}
-      <aside
-        style={{
-          width: "230px",
-          borderRight: "1px solid #1f2937",
-          padding: "1.25rem 1rem",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1.5rem",
-          backgroundColor: "#020617",
-        }}
-      >
+      <aside className="hidden w-64 border-r border-neutral-900 bg-[#020617] px-5 py-5 md:flex md:flex-col">
         {/* Brand */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <div
-            style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "0.75rem",
-              background: "#22c55e",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              color: "#020617",
-              fontSize: "0.8rem",
-            }}
-          >
-            TF
+        <div className="mb-8 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 border border-emerald-500/40">
+            <span className="text-base font-bold text-emerald-400">TF</span>
           </div>
-          <div style={{ lineHeight: 1.1 }}>
-            <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>TradieFlow</div>
-            <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+          <div>
+            <div className="text-sm font-semibold tracking-tight">
+              TradieFlow
+            </div>
+            <div className="text-[11px] text-neutral-500">
               Run your jobs, not your admin
             </div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-  <SidebarLink label="Dashboard" href="/dashboard" />
-  <SidebarLink label="Clients" href="/clients" />
-  <SidebarLink label="Jobs" href="/jobs" />           {/* 🔹 single Jobs tab */}
-  <SidebarLink label="Invoices" href="/invoices" />
-  <SidebarLink label="Settings" href="/settings" disabled />
-</nav>
+        <nav className="flex-1 space-y-1 text-sm">
+          {navItems.map((item) => {
+            const active = pathname?.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={[
+                  "flex items-center justify-between rounded-md px-3 py-2 transition-colors",
+                  active
+                    ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                    : "text-neutral-300 hover:bg-neutral-900 hover:text-white",
+                ].join(" ")}
+              >
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
+          {/* Admin-only Subscribers tab */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={[
+                "mt-3 flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
+                pathname?.startsWith("/admin")
+                  ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                  : "text-neutral-300 hover:bg-neutral-900 hover:text-white",
+              ].join(" ")}
+            >
+              <span>Subscribers</span>
+              <span className="rounded-full bg-emerald-500/10 px-2 py-[2px] text-[10px] text-emerald-300 border border-emerald-500/40">
+                Admin
+              </span>
+            </Link>
+          )}
 
+          {/* Settings (soon) */}
+          <div className="mt-4 rounded-md px-3 py-2 text-sm text-neutral-600 cursor-not-allowed">
+            Settings <span className="text-[11px]">(soon)</span>
+          </div>
+        </nav>
 
-        {/* Bottom / Logout */}
-        <div style={{ marginTop: "auto" }}>
+        {/* Bottom area */}
+        <div className="mt-6 border-t border-neutral-900 pt-4">
           <button
-            onClick={handleLogout}
-            style={{
-              width: "100%",
-              fontSize: "0.8rem",
-              padding: "0.45rem 0.6rem",
-              borderRadius: "0.4rem",
-              border: "1px solid #374151",
-              background: "transparent",
-              color: "#e5e7eb",
-              cursor: "pointer",
+            className="w-full rounded-md border border-neutral-700 bg-transparent px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-900"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.replace("/");
             }}
           >
             Log out
           </button>
-          <p
-            style={{
-              marginTop: "0.4rem",
-              fontSize: "0.7rem",
-              color: "#6b7280",
-            }}
-          >
+
+          <div className="mt-3 text-[11px] text-neutral-500">
             v0.1 · internal dev build
-          </p>
+            <div className="mt-1">
+              Logged in as{" "}
+              <span className="text-neutral-300">
+                {isAdmin ? "Admin" : "User"}
+              </span>
+            </div>
+          </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main
-        style={{
-          flex: 1,
-          padding: "1.5rem 2rem",
-        }}
-      >
-        {children}
+      <main className="flex-1 min-h-screen bg-[#050816]">
+        <div className="mx-auto max-w-6xl px-6 py-6">{children}</div>
       </main>
     </div>
-  );
-}
-
-function SidebarLink({
-  label,
-  href,
-  disabled,
-}: {
-  label: string;
-  href: string;
-  disabled?: boolean;
-}) {
-  const router = useRouter();
-
-  function handleClick() {
-    if (disabled) return;
-    router.push(href);
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={disabled}
-      style={{
-        textAlign: "left",
-        width: "100%",
-        padding: "0.45rem 0.65rem",
-        borderRadius: "0.4rem",
-        border: "none",
-        backgroundColor: disabled ? "transparent" : "#020617",
-        color: disabled ? "#4b5563" : "#e5e7eb",
-        fontSize: "0.8rem",
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
-    >
-      {label}
-      {disabled && (
-        <span style={{ fontSize: "0.65rem", marginLeft: "0.25rem", color: "#4b5563" }}>
-          (soon)
-        </span>
-      )}
-    </button>
   );
 }

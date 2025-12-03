@@ -13,7 +13,8 @@ type Subscription = {
   started_at: string | null;
 };
 
-const ADMIN_EMAIL = "coreyynunn02@outlook.com"; // same as in DashboardLayout
+// SAME EMAIL AS IN DashboardLayout
+const ADMIN_EMAIL = "coreyynunn02@outlook.com";
 
 export default function AdminPage() {
   const router = useRouter();
