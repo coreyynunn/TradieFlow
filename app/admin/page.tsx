@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import DashboardLayout from "@/components/DashboardLayout";
 
+type PlanTier = "starter" | "pro" | null;
+
 type Subscription = {
   id: string;
   email: string | null;
   status: string;
   plan_amount: number | null;
   started_at: string | null;
-  plan_tier: "starter" | "pro" | null;
+  plan_tier: PlanTier;
 };
 
 export default function AdminPage() {
@@ -50,11 +52,46 @@ export default function AdminPage() {
 
   const activeSubs = subs.filter((s) => s.status === "active");
   const activeCount = activeSubs.length;
-  const mrr = activeSubs.reduce(
+
+  const totalMrr = activeSubs.reduce(
     (sum, s) => sum + (s.plan_amount ?? 0),
     0
   );
-  const arr = mrr * 12;
+  const arr = totalMrr * 12;
+
+  const starterSubs = activeSubs.filter((s) => s.plan_tier === "starter");
+  const proSubs = activeSubs.filter((s) => s.plan_tier === "pro");
+  const unknownSubs = activeSubs.filter(
+    (s) => !s.plan_tier || (s.plan_tier !== "starter" && s.plan_tier !== "pro")
+  );
+
+  const starterMrr = starterSubs.reduce(
+    (sum, s) => sum + (s.plan_amount ?? 0),
+    0
+  );
+  const proMrr = proSubs.reduce(
+    (sum, s) => sum + (s.plan_amount ?? 0),
+    0
+  );
+  const unknownMrr = unknownSubs.reduce(
+    (sum, s) => sum + (s.plan_amount ?? 0),
+    0
+  );
+
+  // Fake 6-month trend using current MRR just to give a SaaS-style chart
+  const trendMonths = 6;
+  const monthlyTrend = Array.from({ length: trendMonths }).map((_, idx) => {
+    const monthIndex = trendMonths - idx;
+    const factor = 0.6 + idx * 0.08; // make it look like it grows
+    return {
+      label: `M-${monthIndex}`,
+      value: Math.round(totalMrr * factor),
+    };
+  });
+  const maxTrendValue =
+    monthlyTrend.length > 0
+      ? Math.max(...monthlyTrend.map((m) => m.value))
+      : 0;
 
   if (loading) {
     return (
@@ -77,13 +114,14 @@ export default function AdminPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">
             Subscribers
           </h1>
           <p className="text-xs text-neutral-400 mt-1">
-            See who&apos;s on Starter vs Pro and what recurring money TradieFlow
-            is bringing in.
+            MRR, ARR, plan breakdown and a quick view of how your recurring
+            money is tracking.
           </p>
         </header>
 
@@ -95,8 +133,8 @@ export default function AdminPage() {
             color="emerald"
           />
           <StatCard
-            label="MRR"
-            value={`$${mrr.toFixed(2)}`}
+            label="Total MRR"
+            value={`$${totalMrr.toFixed(2)}`}
             color="sky"
           />
           <StatCard
@@ -104,6 +142,85 @@ export default function AdminPage() {
             value={`$${arr.toFixed(2)}`}
             color="amber"
           />
+        </div>
+
+        {/* MRR Breakdown by plan */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <div className="text-xs text-neutral-400">Starter MRR</div>
+            <div className="mt-2 text-2xl font-semibold text-blue-300">
+              ${starterMrr.toFixed(2)}
+            </div>
+            <div className="mt-1 text-[11px] text-neutral-500">
+              {starterSubs.length} active Starter{" "}
+              {starterSubs.length === 1 ? "user" : "users"}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <div className="text-xs text-neutral-400">Pro MRR</div>
+            <div className="mt-2 text-2xl font-semibold text-emerald-300">
+              ${proMrr.toFixed(2)}
+            </div>
+            <div className="mt-1 text-[11px] text-neutral-500">
+              {proSubs.length} active Pro{" "}
+              {proSubs.length === 1 ? "user" : "users"}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <div className="text-xs text-neutral-400">Other / Unknown</div>
+            <div className="mt-2 text-2xl font-semibold text-neutral-200">
+              ${unknownMrr.toFixed(2)}
+            </div>
+            <div className="mt-1 text-[11px] text-neutral-500">
+              {unknownSubs.length} subs with no plan_tier set
+            </div>
+          </div>
+        </div>
+
+        {/* Simple MRR trend chart */}
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-sm font-medium text-neutral-100">
+                MRR trend (demo)
+              </div>
+              <div className="text-[11px] text-neutral-400">
+                Fake last 6 months based on current MRR – upgrade later to use
+                real history.
+              </div>
+            </div>
+          </div>
+
+          {monthlyTrend.length === 0 || maxTrendValue === 0 ? (
+            <div className="text-xs text-neutral-400">
+              No data yet – add some subscriptions into the table.
+            </div>
+          ) : (
+            <div className="mt-4 flex items-end gap-3 h-40">
+              {monthlyTrend.map((m) => {
+                const height = Math.max(8, (m.value / maxTrendValue) * 100);
+                return (
+                  <div
+                    key={m.label}
+                    className="flex-1 flex flex-col items-center justify-end gap-1"
+                  >
+                    <div
+                      className="w-full rounded-t-md bg-emerald-500/80"
+                      style={{ height: `${height}%` }}
+                    />
+                    <div className="text-[10px] text-neutral-400">
+                      {m.label}
+                    </div>
+                    <div className="text-[10px] text-neutral-500">
+                      ${m.value}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Subscribers Table */}
@@ -181,7 +298,7 @@ export default function AdminPage() {
                         </span>
                       </td>
 
-                      {/* Started date */}
+                      {/* Started */}
                       <td className="py-2 pr-4 text-neutral-400">
                         {s.started_at
                           ? new Date(s.started_at).toLocaleDateString()
