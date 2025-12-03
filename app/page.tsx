@@ -58,7 +58,7 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
-                {/* Main CTA with two-line text inside button (style B) */}
+                {/* Main CTA with two-line text inside button */}
                 <Link
                   href="/auth/signup"
                   className="rounded-md bg-emerald-500 px-5 py-3 text-sm font-semibold text-black hover:bg-emerald-400 inline-flex flex-col items-center justify-center"
@@ -67,7 +67,7 @@ export default function LandingPage() {
                     Start using TradieFlow
                   </span>
                   <span className="mt-0.5 text-[11px] font-normal text-emerald-950/90">
-                    Free 14-day trial → then $99.99/m
+                    Free 14-day trial · then from $49.99/m
                   </span>
                 </Link>
 
@@ -286,6 +286,100 @@ export default function LandingPage() {
                   No bloated menus. Just the tools you need: quotes, jobs,
                   invoices, clients and clear money stats.
                 </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing section */}
+        <section className="border-b border-neutral-800 bg-neutral-950/95">
+          <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+            <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+              Simple pricing for serious tradies.
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-neutral-300">
+              Start on the plan that fits your crew now, and upgrade when
+              you&apos;re ready. Every plan starts with a free 14-day trial.
+            </p>
+
+            <div className="mt-8 grid gap-5 md:grid-cols-2">
+              {/* Starter Plan */}
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 flex flex-col justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase text-emerald-300">
+                    Starter
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold">$49.99</span>
+                    <span className="text-xs text-neutral-400">/ month</span>
+                  </div>
+                  <p className="mt-2 text-xs text-neutral-300">
+                    For solo tradies or small teams that want to get off
+                    spreadsheets and into a simple system.
+                  </p>
+
+                  <ul className="mt-4 space-y-2 text-xs text-neutral-300">
+                    <li>• 1 boss account + up to 4 team users</li>
+                    <li>• Quotes, jobs and invoices</li>
+                    <li>• Client history and basic reporting</li>
+                    <li>• Email support</li>
+                    <li className="text-neutral-500">
+                      • No advanced profitability or team scheduling
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="mt-5">
+                  <Link
+                    href="/auth/signup"
+                    className="inline-flex w-full items-center justify-center rounded-md border border-emerald-500/70 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20"
+                  >
+                    Start Starter trial
+                  </Link>
+                </div>
+              </div>
+
+              {/* Pro Plan */}
+              <div className="rounded-2xl border border-emerald-500/60 bg-neutral-900/80 p-5 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none opacity-30 bg-gradient-to-br from-emerald-500/40 via-transparent to-sky-500/40" />
+                <div className="relative">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase text-emerald-300">
+                      Pro
+                    </div>
+                    <span className="rounded-full bg-emerald-500/20 px-2 py-[2px] text-[10px] text-emerald-100 border border-emerald-400/60">
+                      Most popular
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-3xl font-semibold">$99.99</span>
+                    <span className="text-xs text-neutral-300">/ month</span>
+                  </div>
+                  <p className="mt-2 text-xs text-neutral-100">
+                    For growing crews who want full control of jobs, money and
+                    team – with no limits.
+                  </p>
+
+                  <ul className="mt-4 space-y-2 text-xs text-neutral-100">
+                    <li>• Unlimited users (bosses + team)</li>
+                    <li>• Full access to all features</li>
+                    <li>• Advanced reporting (profitability, overdue, etc.)</li>
+                    <li>• Priority support</li>
+                    <li>• Best choice if you&apos;re serious about scaling</li>
+                  </ul>
+                </div>
+
+                <div className="relative mt-5">
+                  <Link
+                    href="/auth/signup"
+                    className="inline-flex w-full items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-400"
+                  >
+                    Start Pro trial
+                  </Link>
+                  <p className="mt-2 text-[11px] text-neutral-300 text-center">
+                    Free 14 days · then $99.99/m · cancel anytime
+                  </p>
+                </div>
               </div>
             </div>
           </div>
