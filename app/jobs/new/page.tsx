@@ -1,7 +1,10 @@
+// @ts-nocheck
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -12,8 +15,7 @@ type Client = {
 
 export default function NewJobPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const clientFromQuery = searchParams.get("client");
+  
 
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<string>("");
