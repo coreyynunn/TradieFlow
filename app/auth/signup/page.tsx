@@ -1,84 +1,68 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { supabase } from "../../../lib/supabaseClient";
 
 export default function SignupPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  async function handleSignup(e: any) {
-    e.preventDefault();
-    setErrorMsg(null);
+  async function handleSignup() {
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({ email, password });
 
-    if (!email || !password) {
-      setErrorMsg("Email and password are required.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      setLoading(false);
-
-      if (error) {
-        setErrorMsg(error.message);
-        return;
-      }
-
+    if (!error) {
       router.push("/auth/login");
-    } catch (err: any) {
-      setErrorMsg("Unexpected error. Try again.");
-      setLoading(false);
     }
+
+    setLoading(false);
   }
 
   return (
-    <main style={{ padding: "2rem", color: "white" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "1rem" }}>
-        Create account
-      </h1>
+    <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-100">
+      <div className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
+        <h1 className="text-xl font-semibold mb-4 text-center">Create account</h1>
 
-      <form onSubmit={handleSignup} style={{ maxWidth: "300px", display: "grid", gap: "1rem" }}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "0.3rem" }}
-        />
+        <div className="space-y-3">
+          <input
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            placeholder="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <input
-          type="password"
-          placeholder="Password (6+ characters)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "0.3rem" }}
-        />
+          <input
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: "0.6rem",
-            borderRadius: "0.3rem",
-            background: "#22c55e",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          {loading ? "Creating..." : "Sign up"}
-        </button>
+          <button
+            onClick={handleSignup}
+            disabled={loading || !email || !password}
+            className="w-full rounded-md bg-emerald-500 py-2 text-sm font-medium text-black hover:bg-emerald-400 disabled:opacity-60"
+          >
+            {loading ? "Creating account..." : "Sign up"}
+          </button>
+        </div>
 
-        {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
-      </form>
-    </main>
+        <p className="mt-4 text-center text-xs text-neutral-400">
+          Already have an account?{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/auth/login")}
+            className="text-emerald-400 hover:underline"
+          >
+            Log in
+          </button>
+        </p>
+      </div>
+    </div>
   );
 }
