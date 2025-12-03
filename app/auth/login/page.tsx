@@ -2,85 +2,16 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
-import { useRouter } from "next/navigation";
-
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function handleLogin(e: any) {
-    e.preventDefault();
-    setErrorMsg(null);
-
-    if (!email || !password) {
-      setErrorMsg("Both fields are required.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      setLoading(false);
-
-      if (error) {
-        setErrorMsg(error.message);
-        return;
-      }
-
-      router.push("/dashboard");
-    } catch (err: any) {
-      setErrorMsg("Unexpected error. Try again.");
-      setLoading(false);
-    }
-  }
-
   return (
-    <main style={{ padding: "2rem", color: "white" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 600, marginBottom: "1rem" }}>
-        Log in
-      </h1>
-
-      <form onSubmit={handleLogin} style={{ maxWidth: "300px", display: "grid", gap: "1rem" }}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "0.3rem" }}
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "0.3rem" }}
-        />
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: "0.6rem",
-            borderRadius: "0.3rem",
-            background: "#22c55e",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          {loading ? "Logging in..." : "Log in"}
-        </button>
-
-        {errorMsg && <p style={{ color: "red" }}>{errorMsg}</p>}
-      </form>
-    </main>
+    <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-neutral-50">
+      <div className="max-w-sm w-full p-6 rounded-xl border border-neutral-800 bg-neutral-900">
+        <h1 className="text-xl font-semibold mb-2">TradieFlow login</h1>
+        <p className="text-sm text-neutral-400">
+          Login will be wired back up after deployment. For now this is a
+          placeholder so the app can build cleanly on Vercel.
+        </p>
+      </div>
+    </div>
   );
 }
