@@ -44,7 +44,6 @@ export default function QuotesPage() {
       setError(null);
 
       try {
-        // auth check
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -54,25 +53,18 @@ export default function QuotesPage() {
           return;
         }
 
-        // 🔹 Keep this super-safe: select * so we don't explode on missing columns
         const { data: quotesData, error: quotesError } = await supabase
           .from("quotes")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (quotesError) {
-          console.error("Quotes load error", quotesError);
-          throw quotesError;
-        }
+        if (quotesError) throw quotesError;
 
         const { data: clientsData, error: clientsError } = await supabase
           .from("clients")
           .select("id, name");
 
-        if (clientsError) {
-          console.error("Clients load error", clientsError);
-          throw clientsError;
-        }
+        if (clientsError) throw clientsError;
 
         const map: Record<string, string> = {};
         (clientsData || []).forEach((c: any) => {
@@ -96,8 +88,11 @@ export default function QuotesPage() {
     router.push(`/quotes/${id}`);
   };
 
-  // ---------- FILTERING (kept simple, only if status/params exist) ----------
-  
+  // ---------- FIXED FILTER PARAMS ----------
+  const statusParam = "";
+  const owingParam = "";
+  const overdueParam = "";
+
   let filtered = [...quotes];
 
   if (statusParam) {
@@ -137,8 +132,6 @@ export default function QuotesPage() {
   else if (owingParam === "true") filterLabel = "Money owing";
   else if (overdueParam === "true") filterLabel = "Overdue quotes";
 
-  // ---------- RENDER ----------
-
   if (loading) {
     return (
       <DashboardLayout>
@@ -159,7 +152,6 @@ export default function QuotesPage() {
 
   return (
     <DashboardLayout>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-neutral-50">Quotes</h1>
@@ -176,7 +168,6 @@ export default function QuotesPage() {
         </button>
       </div>
 
-      {/* List */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-4 text-sm text-neutral-500">
