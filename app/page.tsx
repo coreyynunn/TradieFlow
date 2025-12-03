@@ -25,7 +25,6 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            {/* Correct login route */}
             <Link
               href="/auth/login"
               className="text-sm text-neutral-300 hover:text-white"
@@ -33,7 +32,6 @@ export default function LandingPage() {
               Log in
             </Link>
 
-            {/* Correct signup route */}
             <Link
               href="/auth/signup"
               className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-black hover:bg-emerald-400"
@@ -66,7 +64,6 @@ export default function LandingPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
-                {/* Use signup for CTA */}
                 <Link
                   href="/auth/signup"
                   className="rounded-md bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-black hover:bg-emerald-400"
@@ -82,19 +79,50 @@ export default function LandingPage() {
                 </Link>
               </div>
 
-              <div className="flex flex-wrap gap-4 text-xs text-neutral-400">
-                <div>• No lock-in · cancel anytime</div>
-                <div>• Built for small trade businesses</div>
-                <div>• Mobile-friendly for onsite use</div>
+              {/* Big stats strip under hero copy */}
+              <div className="mt-4 grid grid-cols-3 gap-4 max-w-xl text-xs">
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3">
+                  <div className="text-[11px] text-neutral-400">
+                    Time saved on admin
+                  </div>
+                  <div className="mt-1 text-2xl font-semibold text-emerald-400">
+                    10+ hrs
+                  </div>
+                  <div className="mt-1 text-[11px] text-neutral-500">
+                    Per week back on the tools
+                  </div>
+                </div>
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3">
+                  <div className="text-[11px] text-neutral-400">
+                    Jobs tracked at once
+                  </div>
+                  <div className="mt-1 text-2xl font-semibold text-sky-400">
+                    40+
+                  </div>
+                  <div className="mt-1 text-[11px] text-neutral-500">
+                    Without losing where you&apos;re at
+                  </div>
+                </div>
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-3">
+                  <div className="text-[11px] text-neutral-400">
+                    Paperwork reduced
+                  </div>
+                  <div className="mt-1 text-2xl font-semibold text-amber-400">
+                    70%
+                  </div>
+                  <div className="mt-1 text-[11px] text-neutral-500">
+                    Quotes → jobs → invoices in clicks
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Right side preview card */}
+            {/* Right side preview card – bigger numbers + extra row */}
             <div className="flex-1">
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-4 shadow-2xl">
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-900/40 p-5 shadow-2xl">
                 <div className="mb-3 flex items-center justify-between text-xs text-neutral-400">
                   <span>Today&apos;s overview</span>
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-emerald-300">
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-0.5 text-[11px] font-semibold text-emerald-300">
                     TradieFlow
                   </span>
                 </div>
@@ -102,28 +130,28 @@ export default function LandingPage() {
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Money received</div>
-                    <div className="mt-1 text-lg font-semibold text-emerald-400">
-                      $7,420
+                    <div className="mt-1 text-3xl font-semibold leading-tight text-emerald-400">
+                      $27,420
                     </div>
                     <div className="mt-1 text-[11px] text-neutral-500">
-                      From 12 invoices this month
+                      From 34 invoices this month
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Money owing</div>
-                    <div className="mt-1 text-lg font-semibold text-amber-400">
-                      $3,180
+                    <div className="mt-1 text-3xl font-semibold leading-tight text-amber-400">
+                      $13,180
                     </div>
                     <div className="mt-1 text-[11px] text-neutral-500">
-                      4 invoices overdue
+                      9 invoices overdue
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Quotes out</div>
-                    <div className="mt-1 text-lg font-semibold text-sky-400">
-                      9 open
+                    <div className="mt-1 text-2xl font-semibold text-sky-400">
+                      23 open
                     </div>
                     <div className="mt-1 text-[11px] text-neutral-500">
                       Convert to jobs in one tap
@@ -132,11 +160,32 @@ export default function LandingPage() {
 
                   <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
                     <div className="text-neutral-400">Active jobs</div>
-                    <div className="mt-1 text-lg font-semibold text-purple-400">
-                      6 jobs
+                    <div className="mt-1 text-2xl font-semibold text-purple-400">
+                      14 jobs
                     </div>
                     <div className="mt-1 text-[11px] text-neutral-500">
                       Track status: quoted → active → complete
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-950/60 p-3 col-span-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-neutral-400 text-[11px]">
+                          Average days to get paid
+                        </div>
+                        <div className="mt-1 text-2xl font-semibold text-emerald-300">
+                          3.2 days
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-neutral-400 text-[11px]">
+                          Repeat clients this month
+                        </div>
+                        <div className="mt-1 text-2xl font-semibold text-sky-300 text-right">
+                          18
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -166,7 +215,7 @@ export default function LandingPage() {
               phone.
             </p>
 
-            <div className="mt-8 grid gap-5 md:grid-cols-3">
+            <div className="mt-8 grid gap-5 md:grid-cols-4">
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
                 <div className="text-sm font-medium text-neutral-100">
                   Fast quoting
@@ -195,6 +244,47 @@ export default function LandingPage() {
                   Create invoices from completed jobs in a couple of clicks.
                   See what&apos;s paid, what&apos;s owing and what&apos;s
                   overdue at a glance.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+                <div className="text-sm font-medium text-neutral-100">
+                  All client details in one place
+                </div>
+                <p className="mt-2 text-xs text-neutral-300">
+                  Every quote, job and invoice is tied back to the client so you
+                  can see their full history instantly.
+                </p>
+              </div>
+            </div>
+
+            {/* Extra reassurance row */}
+            <div className="mt-10 grid gap-4 md:grid-cols-3 text-xs text-neutral-300">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+                <div className="font-medium text-neutral-100 mb-1">
+                  Built for the way tradies actually work
+                </div>
+                <p className="text-neutral-300">
+                  Designed around how small trade businesses quote, schedule and
+                  get paid – not generic office software.
+                </p>
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+                <div className="font-medium text-neutral-100 mb-1">
+                  Mobile-friendly for onsite
+                </div>
+                <p className="text-neutral-300">
+                  Create or update quotes and jobs while you&apos;re standing in
+                  the driveway, not late at night at the kitchen table.
+                </p>
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+                <div className="font-medium text-neutral-100 mb-1">
+                  Simple enough to actually use
+                </div>
+                <p className="text-neutral-300">
+                  No bloated menus. Just the tools you need: quotes, jobs,
+                  invoices, clients and clear money stats.
                 </p>
               </div>
             </div>
