@@ -198,15 +198,25 @@ export default function SignupPage() {
         </form>
 
         <div className="mt-4 text-[11px] text-neutral-500 text-center">
-          Already have an account?{" "}
-          <button
-            type="button"
-            onClick={() => router.push("/auth/login")}
-            className="text-emerald-300 hover:underline"
-          >
-            Log in
-          </button>
-        </div>
+  Already have an account?{" "}
+  <button
+    type="button"
+    onClick={() => router.push("/auth/login")}
+    className="text-emerald-300 hover:underline"
+  >
+    Log in
+  </button>
+</div>
+
+<div className="mt-2 text-[11px] text-neutral-500 text-center">
+  <button
+    type="button"
+    onClick={() => router.push("/")}
+    className="text-neutral-300 hover:underline"
+  >
+   ← Back to home
+  </button>
+</div>
       </div>
     </div>
   );
