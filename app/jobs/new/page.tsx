@@ -15,7 +15,6 @@ type Client = {
 
 export default function NewJobPage() {
   const router = useRouter();
-  
 
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<string>("");
@@ -54,13 +53,7 @@ export default function NewJobPage() {
           throw clientsError;
         }
 
-        const list = (clientsData || []) as Client[];
-        setClients(list);
-
-        if (clientFromQuery) {
-          setClientId(clientFromQuery);
-        }
-
+        setClients((clientsData || []) as Client[]);
         setLoading(false);
       } catch (e: any) {
         console.error("New job load error", e);
@@ -70,7 +63,7 @@ export default function NewJobPage() {
     };
 
     load();
-  }, [router, clientFromQuery]);
+  }, [router]);
 
   async function handleSave() {
     if (!title.trim()) {
@@ -243,7 +236,7 @@ export default function NewJobPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="h-9 px-4 rounded-md bg-neutral-100 text-neutral-900 text-xs font-medium hover:bg-white border border-neutral-300 disabled:opacity-60"
+            className="h-9 px-4 rounded-md bg-neutral-100 text-neutral-900 text-xs font-medium hover:bg:white border border-neutral-300 disabled:opacity-60"
           >
             {saving ? "Saving…" : "Create Job"}
           </button>
