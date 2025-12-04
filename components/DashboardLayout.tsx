@@ -50,6 +50,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { label: "Quotes", href: "/quotes" },
     { label: "Jobs", href: "/jobs" },
     { label: "Invoices", href: "/invoices" },
+    { label: "Settings", href: "/setting" },
   ];
 
   const navItems = isAdmin
@@ -105,9 +106,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </Link>
           ))}
 
-          <div className="mt-4 rounded-md px-3 py-2 text-sm text-neutral-600 cursor-not-allowed">
-            Settings <span className="text-[11px]">(soon)</span>
-          </div>
+          
         </nav>
 
         {/* Bottom area */}
