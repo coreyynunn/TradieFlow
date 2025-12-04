@@ -1,492 +1,382 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import DashboardLayout from "@/components/DashboardLayout";
-
-type QuoteItemDB = {
-  description?: string;
-  qty?: number;
-  quantity?: number;
-  rate?: number;
-  price?: number;
-  unit_price?: number;
-  line_total?: number;
-};
 
 type Quote = {
-  id: number | string;
-  client_id?: number | string;
-  title: string | null;
-  status: string | null;
-  subtotal: number;
-  gst: number;
-  total: number;
-  items: QuoteItemDB[] | null;
-  created_at: string | null;
-  clients?: {
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-  } | null;
+  id: string;
+  user_id: string;
+  client_id: string | null;
+  title?: string | null;
+  status?: string | null;
+  issue_date?: string | null;
+  due_date?: string | null;
+  subtotal?: number | null;
+  gst?: number | null;
+  total?: number | null;
+  notes?: string | null;
 };
 
-function formatCurrency(value: number | string | null | undefined) {
-  const num = Number(value ?? 0) || 0;
-  return num.toLocaleString("en-AU", {
+type Client = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+};
+
+type QuoteItem = {
+  id: string;
+  quote_id: string;
+  description?: string | null;
+  quantity?: number | null;
+  unit_price?: number | null;
+  total?: number | null;
+};
+
+const formatCurrency = (value: number | null | undefined) =>
+  new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency: "AUD",
+    minimumFractionDigits: 2,
+  }).format(value || 0);
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
-}
+};
 
 export default function QuoteDetailPage() {
-  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const quoteIdParam = params?.id as string;
+  const params = useParams() as { id: string };
 
-  const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
+  const [items, setItems] = useState<QuoteItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [creatingInvoice, setCreatingInvoice] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      if (!quoteIdParam) return;
-
-      setLoading(true);
-      setError(null);
-
+    const loadData = async () => {
       try {
+        setLoading(true);
+        setError(null);
+
+        // 1) Auth check (client-side)
         const {
           data: { user },
+          error: userError,
         } = await supabase.auth.getUser();
 
+        if (userError) {
+          console.error("Error loading user", userError);
+        }
+
         if (!user) {
-          router.replace("/auth/login");
+          // not logged in → send to login
+          router.push("/auth/login");
           return;
         }
 
-        const numericId = Number(quoteIdParam);
-        if (Number.isNaN(numericId)) {
-          setError("Invalid quote ID.");
-          setLoading(false);
+        const quoteId = params.id;
+        if (!quoteId) {
+          setError("No quote ID provided.");
           return;
         }
 
-        const { data, error } = await supabase
+        // 2) Load quote
+        const { data: quoteData, error: quoteError } = await supabase
           .from("quotes")
-          .select(
-            `
-            id,
-            client_id,
-            title,
-            status,
-            subtotal,
-            gst,
-            total,
-            items,
-            created_at,
-            clients (
-              name,
-              email,
-              phone
-            )
-          `
-          )
-          .eq("id", numericId)
+          .select("*")
+          .eq("id", quoteId)
+          .eq("user_id", user.id)
           .maybeSingle();
 
-        if (error || !data) {
-          console.error("Quote load error", error);
+        if (quoteError || !quoteData) {
+          console.error("Error loading quote", quoteError);
           setError("Quote not found.");
-          setQuote(null);
-        } else {
-          const itemsArray = Array.isArray((data as any).items)
-            ? ((data as any).items as QuoteItemDB[])
-            : [];
-
-          setQuote({
-            ...(data as any),
-            items: itemsArray,
-          });
+          return;
         }
-      } catch (e: any) {
-        console.error("Unexpected quote load error", e);
-        setError("Failed to load quote.");
-        setQuote(null);
+
+        setQuote(quoteData as Quote);
+
+        // 3) Load client (if any)
+        if (quoteData.client_id) {
+          const { data: clientData, error: clientError } = await supabase
+            .from("clients")
+            .select("*")
+            .eq("id", quoteData.client_id)
+            .maybeSingle();
+
+          if (clientError) {
+            console.error("Error loading client", clientError);
+          } else if (clientData) {
+            setClient(clientData as Client);
+          }
+        }
+
+        // 4) Load line items
+        const { data: itemsData, error: itemsError } = await supabase
+          .from("quote_items")
+          .select("*")
+          .eq("quote_id", quoteData.id);
+
+        if (itemsError) {
+          console.error("Error loading quote items", itemsError);
+        } else if (itemsData) {
+          setItems(itemsData as QuoteItem[]);
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Something went wrong loading this quote.");
       } finally {
         setLoading(false);
       }
     };
 
-    load();
-  }, [quoteIdParam, router]);
-
-  async function handleUpdateStatus(newStatus: string) {
-    if (!quote) return;
-
-    setUpdatingStatus(true);
-    setError(null);
-
-    try {
-      // update quote status
-      const { error } = await supabase
-        .from("quotes")
-        .update({ status: newStatus })
-        .eq("id", quote.id);
-
-      if (error) {
-        console.error("Update status error", error);
-        setError("Failed to update status.");
-        setUpdatingStatus(false);
-        return;
-      }
-
-      // update local state
-      setQuote((prev) => (prev ? { ...prev, status: newStatus } : prev));
-
-      // if accepted, ensure job exists
-      if (newStatus === "accepted") {
-        const { data: userData } = await supabase.auth.getUser();
-        const user = userData?.user;
-        if (!user) {
-          router.replace("/auth/login");
-          return;
-        }
-
-        // check if job already exists for this quote
-        const { data: existingJob } = await supabase
-          .from("jobs")
-          .select("id")
-          .eq("quote_id", quote.id)
-          .maybeSingle();
-
-        if (!existingJob) {
-          const title =
-            quote.title ||
-            (quote.clients?.name
-              ? `Job for ${quote.clients.name}`
-              : `Job for quote #${String(quote.id).slice(0, 8)}`);
-
-          await supabase.from("jobs").insert({
-  user_id: user.id,
-  client_id: quote.client_id ? String(quote.client_id) : null,
-  quote_id: Number(quote.id),
-  status: "pending",   // ✅ PENDING so it lands in Pending column
-  title,
-});
-        }
-      }
-    } catch (e: any) {
-      console.error("Update status error", e);
-      setError("Failed to update status.");
-    } finally {
-      setUpdatingStatus(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!quote) return;
-    const confirmed = confirm("Delete this quote permanently?");
-    if (!confirmed) return;
-
-    setDeleting(true);
-    try {
-      const { error } = await supabase
-        .from("quotes")
-        .delete()
-        .eq("id", quote.id);
-
-      if (error) {
-        console.error("Delete error", error);
-        alert("Error deleting quote.");
-        setDeleting(false);
-        return;
-      }
-
-      router.push("/quotes");
-    } catch (e: any) {
-      console.error("Delete error", e);
-      alert("Error deleting quote.");
-      setDeleting(false);
-    }
-  }
-
-  async function handleCreateInvoice() {
-    if (!quote) return;
-    if (!quote.client_id) {
-      alert("This quote is missing a client.");
-      return;
-    }
-
-    setCreatingInvoice(true);
-    setError(null);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.replace("/auth/login");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("invoices")
-        .insert({
-          user_id: user.id,
-          client_id: String(quote.client_id),
-          quote_id: Number(quote.id),
-          status: "sent",
-          issue_date: new Date().toISOString(),
-          subtotal: quote.subtotal,
-          gst: quote.gst,
-          total: quote.total,
-          items: quote.items || [],
-        })
-        .select("id")
-        .single();
-
-      if (error) {
-        console.error("Create invoice error", error);
-        setError("Failed to create invoice.");
-        setCreatingInvoice(false);
-        return;
-      }
-
-      router.push(`/invoices/${data.id}`);
-    } catch (e: any) {
-      console.error("Create invoice error", e);
-      setError("Failed to create invoice.");
-      setCreatingInvoice(false);
-    }
-  }
+    loadData();
+  }, [router, params.id]);
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="min-h-[60vh] flex items-center justify-center text-neutral-400">
-          Loading quote…
-        </div>
-      </DashboardLayout>
+      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
+        <p className="text-slate-300 text-sm">Loading quote...</p>
+      </div>
     );
   }
 
   if (error || !quote) {
     return (
-      <DashboardLayout>
-        <div className="min-h-[60vh] flex items-center justify-center text-neutral-50">
-          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-xl space-y-3 max-w-sm">
-            <div className="text-lg font-semibold">Error</div>
-            <div className="text-red-400">{error || "Quote not found."}</div>
-            <button
-              onClick={() => router.push("/quotes")}
-              className="mt-2 px-3 py-1.5 text-xs rounded bg-neutral-100 text-neutral-900 hover:bg-white transition"
-            >
-              Back to quotes
-            </button>
-          </div>
+      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-sm text-red-400 mb-3">
+            {error || "Quote not found."}
+          </p>
+          <Link
+            href="/quotes"
+            className="text-sm text-emerald-400 hover:text-emerald-300"
+          >
+            ← Back to Quotes
+          </Link>
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
-  const items: QuoteItemDB[] = quote.items || [];
+  // Calculations
+  const calculatedSubtotal = items.reduce((sum, item) => {
+    const qty = item.quantity ?? 0;
+    const price = item.unit_price ?? 0;
+    return sum + qty * price;
+  }, 0);
 
-  const createdDate = quote.created_at
-    ? new Date(quote.created_at).toLocaleString("en-AU", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
-    : "-";
-
-  const client = quote.clients;
-  const rawStatus = (quote.status || "draft").toLowerCase();
-  const statusLabel = rawStatus.toUpperCase();
-
-  let statusClasses =
-    "inline-flex px-3 py-1 text-xs rounded-full border bg-neutral-900 text-neutral-200 border-neutral-700";
-
-  if (rawStatus === "sent") {
-    statusClasses =
-      "inline-flex px-3 py-1 text-xs rounded-full border bg-blue-900/40 text-blue-200 border-blue-500/60";
-  } else if (rawStatus === "accepted") {
-    statusClasses =
-      "inline-flex px-3 py-1 text-xs rounded-full border bg-emerald-900/40 text-emerald-200 border-emerald-500/60";
-  } else if (rawStatus === "declined") {
-    statusClasses =
-      "inline-flex px-3 py-1 text-xs rounded-full border bg-red-900/40 text-red-200 border-red-500/60";
-  } else if (rawStatus === "paid") {
-    statusClasses =
-      "inline-flex px-3 py-1 text-xs rounded-full border bg-emerald-700/40 text-emerald-100 border-emerald-400/80";
-  }
-
-  const idStr = String(quote.id);
-  const shortId = idStr.slice(0, 8);
+  const subtotal = quote.subtotal ?? calculatedSubtotal;
+  const gst =
+    quote.gst ??
+    Math.round((subtotal * 0.1 + Number.EPSILON) * 100) / 100; // 10% GST
+  const total = quote.total ?? subtotal + gst;
+  const status = quote.status ?? (total > 0 ? "Draft" : "New");
 
   return (
-    <DashboardLayout>
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Back */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <Link
+            href="/quotes"
+            className="inline-flex items-center text-sm text-slate-300 hover:text-white transition-colors"
+          >
+            <span className="mr-2">←</span>
+            Back to Quotes
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-200">
+              {status}
+            </span>
+          </div>
+        </div>
+
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="mb-8 flex flex-col gap-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg shadow-black/40 md:flex-row md:items-center md:justify-between">
           <div>
-            <div
-              onClick={() => router.push("/quotes")}
-              className="cursor-pointer text-xs mb-2 text-neutral-400 hover:text-neutral-200 transition"
-            >
-              ← Back to quotes
-            </div>
-            <h1 className="text-3xl font-semibold">
-              {quote.title || `Quote #${shortId}`}
+            <h1 className="text-2xl font-semibold text-white">
+              {quote.title || "Quote"}
             </h1>
-            <p className="text-neutral-400 text-sm mt-1">
-              Created {createdDate}
+            <p className="mt-1 text-sm text-slate-300">
+              Quote ID:{" "}
+              <span className="font-mono text-slate-100">{quote.id}</span>
+            </p>
+            <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-300">
+              <div>
+                <span className="text-slate-400">Issued: </span>
+                <span>{formatDate(quote.issue_date)}</span>
+              </div>
+              <div>
+                <span className="text-slate-400">Due: </span>
+                <span>{formatDate(quote.due_date)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            {/* Edit placeholder */}
+            <Link
+              href={`/quotes/${quote.id}/edit`}
+              className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-50 shadow-sm hover:bg-slate-750 hover:border-slate-500 transition-colors"
+            >
+              Edit Quote
+            </Link>
+
+            {/* Convert to Invoice placeholder */}
+            <Link
+              href={`/invoices/new?fromQuote=${quote.id}`}
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 transition-colors"
+            >
+              Convert to Invoice
+            </Link>
+          </div>
+        </div>
+
+        {/* Client + Totals */}
+        <div className="mb-8 grid gap-6 md:grid-cols-[minmax(0,2fr),minmax(260px,1fr)]">
+          {/* Client card */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Client
+            </h2>
+            {client ? (
+              <div className="mt-3 space-y-1 text-sm text-slate-200">
+                <p className="font-medium text-white">{client.name}</p>
+                {client.email && <p className="text-slate-300">{client.email}</p>}
+                {client.phone && <p className="text-slate-300">{client.phone}</p>}
+                {client.address && (
+                  <p className="mt-1 text-xs text-slate-400 whitespace-pre-line">
+                    {client.address}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-400">
+                No client linked to this quote.
+              </p>
+            )}
+          </div>
+
+          {/* Totals card */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Totals
+            </h2>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-300">Subtotal</dt>
+                <dd className="font-medium text-slate-50">
+                  {formatCurrency(subtotal)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-slate-300">GST (10%)</dt>
+                <dd className="font-medium text-slate-50">
+                  {formatCurrency(gst)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-800 pt-3 mt-3">
+                <dt className="text-sm font-semibold text-slate-100">Total</dt>
+                <dd className="text-lg font-semibold text-emerald-400">
+                  {formatCurrency(total)}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        {/* Line items */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Line Items
+            </h2>
+            <p className="text-xs text-slate-400">
+              {items.length} item{items.length === 1 ? "" : "s"}
             </p>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <div className={statusClasses}>{statusLabel}</div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => router.push(`/quotes/${quoteIdParam}/edit`)}
-                className="h-8 px-3 rounded-md bg-neutral-100 text-neutral-900 text-xs font-medium hover:bg-white border border-neutral-300 transition"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="h-8 px-3 rounded-md bg-red-500/20 text-red-300 text-xs font-medium border border-red-500/40 hover:bg-red-500/30 disabled:opacity-60 transition"
-              >
-                {deleting ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick status + invoice */}
-        <div className="flex flex-wrap gap-2 text-xs">
-          <button
-            disabled={updatingStatus}
-            onClick={() => handleUpdateStatus("sent")}
-            className="px-3 py-1 rounded-md border border-blue-500/60 bg-blue-900/40 text-blue-100 hover:bg-blue-900/70 disabled:opacity-60"
-          >
-            Mark as Sent
-          </button>
-          <button
-            disabled={updatingStatus}
-            onClick={() => handleUpdateStatus("accepted")}
-            className="px-3 py-1 rounded-md border border-emerald-500/60 bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900/70 disabled:opacity-60"
-          >
-            Mark as Accepted (creates Job)
-          </button>
-          <button
-            disabled={updatingStatus}
-            onClick={() => handleUpdateStatus("paid")}
-            className="px-3 py-1 rounded-md border border-emerald-400/80 bg-emerald-700/40 text-emerald-50 hover:bg-emerald-700/70 disabled:opacity-60"
-          >
-            Mark as Paid
-          </button>
-          <button
-            disabled={creatingInvoice}
-            onClick={handleCreateInvoice}
-            className="px-3 py-1 rounded-md border border-neutral-500/60 bg-neutral-900 text-neutral-100 hover:bg-neutral-800 disabled:opacity-60"
-          >
-            {creatingInvoice ? "Creating invoice…" : "Create invoice"}
-          </button>
-        </div>
-
-        {/* Top Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Client */}
-          <div className="md:col-span-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/60 space-y-1">
-            <div className="text-xs text-neutral-500 uppercase">Client</div>
-            <div className="text-lg font-semibold">{client?.name}</div>
-            <div className="text-sm text-neutral-400">
-              {client?.email && <div>{client.email}</div>}
-              {client?.phone && <div>{client.phone}</div>}
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="p-4 rounded-xl border border-neutral-800 bg-neutral-900/60 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-neutral-400">Subtotal</span>
-              <span>{formatCurrency(quote.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-neutral-400">GST</span>
-              <span>{formatCurrency(quote.gst)}</span>
-            </div>
-            <div className="border-t border-neutral-800 pt-2 flex justify-between font-semibold">
-              <span>Total</span>
-              <span className="text-lg">{formatCurrency(quote.total)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Items */}
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-800 text-sm font-medium">
-            Line Items ({items.length})
-          </div>
-
           {items.length === 0 ? (
-            <div className="p-4 text-neutral-500 text-sm">No items</div>
+            <p className="text-sm text-slate-400">
+              No line items on this quote yet.
+            </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-neutral-900">
-                <tr>
-                  <th className="px-4 py-2 text-left text-neutral-400">
-                    Description
-                  </th>
-                  <th className="px-4 py-2 text-right text-neutral-400">
-                    Qty
-                  </th>
-                  <th className="px-4 py-2 text-right text-neutral-400">
-                    Rate
-                  </th>
-                  <th className="px-4 py-2 text-right text-neutral-400">
-                    Total
-                  </th>
-                </tr>
-              </thead>
+            <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/40">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-900/80">
+                  <tr className="text-xs uppercase tracking-wide text-slate-400">
+                    <th className="px-4 py-3 text-left font-medium">Item</th>
+                    <th className="px-4 py-3 text-right font-medium">Qty</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Unit Price
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Line Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const qty = item.quantity ?? 0;
+                    const price = item.unit_price ?? 0;
+                    const lineTotal =
+                      item.total ??
+                      Math.round((qty * price + Number.EPSILON) * 100) / 100;
 
-              <tbody>
-                {items.map((item, i) => {
-                  const qty = Number(item.qty ?? item.quantity ?? 0);
-                  const unit = Number(
-                    item.rate ?? item.price ?? item.unit_price ?? 0
-                  );
-                  const line = item.line_total ?? qty * unit;
-
-                  return (
-                    <tr
-                      key={i}
-                      className="border-t border-neutral-800 hover:bg-neutral-900 transition"
-                    >
-                      <td className="px-4 py-3">{item.description}</td>
-                      <td className="px-4 py-3 text-right">
-                        {qty.toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {formatCurrency(unit)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold">
-                        {formatCurrency(line)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr
+                        key={item.id}
+                        className="border-t border-slate-800/80 text-slate-100"
+                      >
+                        <td className="px-4 py-3 align-top">
+                          <div className="font-medium text-slate-50">
+                            {item.description || "Untitled item"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right align-top text-slate-200">
+                          {qty}
+                        </td>
+                        <td className="px-4 py-3 text-right align-top text-slate-200">
+                          {formatCurrency(price)}
+                        </td>
+                        <td className="px-4 py-3 text-right align-top font-semibold text-slate-50">
+                          {formatCurrency(lineTotal)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
+
+        {/* Notes */}
+        {quote.notes && (
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Notes
+            </h2>
+            <p className="mt-2 whitespace-pre-line text-sm text-slate-200">
+              {quote.notes}
+            </p>
+          </div>
+        )}
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

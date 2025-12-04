@@ -68,15 +68,25 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-xs text-neutral-400">
-          Don&apos;t have an account?{" "}
-          <button
-            type="button"
-            onClick={() => router.push("/auth/signup")}
-            className="text-emerald-400 hover:underline"
-          >
-            Sign up
-          </button>
-        </p>
+  Don&apos;t have an account?{" "}
+  <button
+    type="button"
+    onClick={() => router.push("/auth/signup")}
+    className="text-emerald-400 hover:underline"
+  >
+    Sign up
+  </button>
+</p>
+
+<div className="mt-2 text-[11px] text-neutral-500 text-center">
+  <button
+    type="button"
+    onClick={() => router.push("/")}
+    className="text-neutral-300 hover:underline"
+  >
+    ← Back to home
+  </button>
+</div>
       </div>
     </div>
   );
