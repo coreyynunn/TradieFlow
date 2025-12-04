@@ -63,6 +63,7 @@ export default function QuoteDetailPage() {
   const [client, setClient] = useState<Client | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -77,11 +78,13 @@ export default function QuoteDetailPage() {
         } = await supabase.auth.getUser();
 
         if (userError) {
-          console.error("Error loading user", userError);
+          console.error("Error loading user", {
+            message: userError.message,
+            ...userError,
+          });
         }
 
         if (!user) {
-          // not logged in → send to login
           router.push("/auth/login");
           return;
         }
@@ -101,7 +104,11 @@ export default function QuoteDetailPage() {
           .maybeSingle();
 
         if (quoteError || !quoteData) {
-          console.error("Error loading quote", quoteError);
+          console.error("Error loading quote", {
+            message: quoteError?.message,
+            details: quoteError?.details,
+            hint: quoteError?.hint,
+          });
           setError("Quote not found.");
           return;
         }
@@ -117,7 +124,11 @@ export default function QuoteDetailPage() {
             .maybeSingle();
 
           if (clientError) {
-            console.error("Error loading client", clientError);
+            console.error("Error loading client", {
+              message: clientError.message,
+              details: clientError.details,
+              hint: clientError.hint,
+            });
           } else if (clientData) {
             setClient(clientData as Client);
           }
@@ -125,17 +136,19 @@ export default function QuoteDetailPage() {
 
         // 4) Load line items
         const { data: itemsData, error: itemsError } = await supabase
-          .from("quote_items")
-          .select("*")
-          .eq("quote_id", quoteData.id);
+  .from("quote_items")
+  .select("*")
+  .eq("quote_id", quoteData.id);
 
-        if (itemsError) {
-          console.error("Error loading quote items", itemsError);
-        } else if (itemsData) {
-          setItems(itemsData as QuoteItem[]);
-        }
+// If the table/rows don't exist or there’s an error, just treat it as empty for now
+if (!itemsError && itemsData) {
+  setItems(itemsData as QuoteItem[]);
+} else {
+  setItems([]);
+}
+
       } catch (err) {
-        console.error(err);
+        console.error("Unexpected error loading quote", err);
         setError("Something went wrong loading this quote.");
       } finally {
         setLoading(false);
@@ -145,6 +158,119 @@ export default function QuoteDetailPage() {
     loadData();
   }, [router, params.id]);
 
+  // Calculations
+  const calculatedSubtotal = items.reduce((sum, item) => {
+    const qty = item.quantity ?? 0;
+    const price = item.unit_price ?? 0;
+    return sum + qty * price;
+  }, 0);
+
+  const subtotal = quote?.subtotal ?? calculatedSubtotal;
+  const gst =
+    quote?.gst ??
+    Math.round((subtotal * 0.1 + Number.EPSILON) * 100) / 100; // 10% GST
+  const total = quote?.total ?? subtotal + gst;
+  const status = quote?.status ?? (total > 0 ? "Draft" : "New");
+
+  const handleConvertToInvoice = async () => {
+    if (!quote) return;
+
+    try {
+      setConverting(true);
+      setError(null);
+
+      // Check user again in case session expired
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Error loading user in convert", {
+          message: userError.message,
+          ...userError,
+        });
+      }
+
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+
+      // 1) Create invoice row
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          user_id: user.id,
+          client_id: quote.client_id,
+          title: quote.title || `Invoice from quote ${quote.id}`,
+          status: "Draft",
+          issue_date: new Date().toISOString(),
+          due_date: quote.due_date,
+          subtotal,
+          gst,
+          total,
+          notes: quote.notes,
+        })
+        .select()
+        .single();
+
+      if (invoiceError || !invoiceData) {
+        console.error("Error creating invoice", {
+          message: invoiceError?.message,
+          details: invoiceError?.details,
+          hint: invoiceError?.hint,
+        });
+        setError("Failed to create invoice from this quote.");
+        return;
+      }
+
+      const newInvoiceId = invoiceData.id;
+
+      // 2) Copy line items into invoice_items
+      if (items.length > 0) {
+        const invoiceItems = items.map((item) => {
+          const qty = item.quantity ?? 0;
+          const price = item.unit_price ?? 0;
+          const lineTotal =
+            item.total ??
+            Math.round((qty * price + Number.EPSILON) * 100) / 100;
+
+          return {
+            invoice_id: newInvoiceId,
+            description: item.description,
+            quantity: qty,
+            unit_price: price,
+            total: lineTotal,
+          };
+        });
+
+        const { error: invoiceItemsError } = await supabase
+          .from("invoice_items")
+          .insert(invoiceItems);
+
+        if (invoiceItemsError) {
+          console.error("Error creating invoice items", {
+            message: invoiceItemsError.message,
+            details: invoiceItemsError.details,
+            hint: invoiceItemsError.hint,
+          });
+          setError(
+            "Invoice was created, but some line items may not have copied across."
+          );
+        }
+      }
+
+      // 3) Redirect to the new invoice detail page
+      router.push(`/invoices/${newInvoiceId}`);
+    } catch (err) {
+      console.error("Unexpected error converting to invoice", err);
+      setError("Something went wrong converting this quote to an invoice.");
+    } finally {
+      setConverting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
@@ -153,7 +279,7 @@ export default function QuoteDetailPage() {
     );
   }
 
-  if (error || !quote) {
+  if (error && !quote) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -171,24 +297,12 @@ export default function QuoteDetailPage() {
     );
   }
 
-  // Calculations
-  const calculatedSubtotal = items.reduce((sum, item) => {
-    const qty = item.quantity ?? 0;
-    const price = item.unit_price ?? 0;
-    return sum + qty * price;
-  }, 0);
-
-  const subtotal = quote.subtotal ?? calculatedSubtotal;
-  const gst =
-    quote.gst ??
-    Math.round((subtotal * 0.1 + Number.EPSILON) * 100) / 100; // 10% GST
-  const total = quote.total ?? subtotal + gst;
-  const status = quote.status ?? (total > 0 ? "Draft" : "New");
+  if (!quote) return null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back */}
+        {/* Back + Status */}
         <div className="mb-6 flex items-center justify-between gap-4">
           <Link
             href="/quotes"
@@ -236,15 +350,23 @@ export default function QuoteDetailPage() {
               Edit Quote
             </Link>
 
-            {/* Convert to Invoice placeholder */}
-            <Link
-              href="/invoices/new"
-              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 transition-colors"
+            {/* Convert to Invoice */}
+            <button
+              type="button"
+              onClick={handleConvertToInvoice}
+              disabled={converting}
+              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
-              Convert to Invoice
-            </Link>
+              {converting ? "Converting..." : "Convert to Invoice"}
+            </button>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-500/40 bg-red-950/40 px-4 py-3 text-xs text-red-200">
+            {error}
+          </div>
+        )}
 
         {/* Client + Totals */}
         <div className="mb-8 grid gap-6 md:grid-cols-[minmax(0,2fr),minmax(260px,1fr)]">
