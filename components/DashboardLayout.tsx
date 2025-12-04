@@ -47,6 +47,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const baseNavItems = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Clients", href: "/clients" },
+    { label: "Quotes", href: "/quotes" },
     { label: "Jobs", href: "/jobs" },
     { label: "Invoices", href: "/invoices" },
   ];
