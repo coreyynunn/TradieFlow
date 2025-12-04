@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabaseClient";
 
 type Quote = {
@@ -64,6 +65,7 @@ export default function QuoteDetailPage() {
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [converting, setConverting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -71,15 +73,14 @@ export default function QuoteDetailPage() {
         setLoading(true);
         setError(null);
 
-        // 1) Auth check (client-side)
         const {
           data: { user },
           error: userError,
         } = await supabase.auth.getUser();
 
         if (userError) {
-  console.error("Error loading user", userError);
-}
+          console.error("Error loading user", userError);
+        }
 
         if (!user) {
           router.push("/auth/login");
@@ -92,7 +93,6 @@ export default function QuoteDetailPage() {
           return;
         }
 
-        // 2) Load quote
         const { data: quoteData, error: quoteError } = await supabase
           .from("quotes")
           .select("*")
@@ -101,18 +101,13 @@ export default function QuoteDetailPage() {
           .maybeSingle();
 
         if (quoteError || !quoteData) {
-          console.error("Error loading quote", {
-            message: quoteError?.message,
-            details: quoteError?.details,
-            hint: quoteError?.hint,
-          });
+          console.error("Error loading quote", quoteError);
           setError("Quote not found.");
           return;
         }
 
         setQuote(quoteData as Quote);
 
-        // 3) Load client (if any)
         if (quoteData.client_id) {
           const { data: clientData, error: clientError } = await supabase
             .from("clients")
@@ -121,29 +116,28 @@ export default function QuoteDetailPage() {
             .maybeSingle();
 
           if (clientError) {
-            console.error("Error loading client", {
-              message: clientError.message,
-              details: clientError.details,
-              hint: clientError.hint,
-            });
+            console.error("Error loading client", clientError);
           } else if (clientData) {
             setClient(clientData as Client);
           }
         }
 
-        // 4) Load line items
         const { data: itemsData, error: itemsError } = await supabase
-  .from("quote_items")
-  .select("*")
-  .eq("quote_id", quoteData.id);
+          .from("quote_items")
+          .select("*")
+          .eq("quote_id", quoteData.id);
 
-// If table/rows don’t exist or there’s an error, just treat as empty for now
-if (!itemsError && itemsData) {
-  setItems(itemsData as QuoteItem[]);
-} else {
-  setItems([]);
-}
-
+        if (!itemsError && itemsData) {
+          setItems(itemsData as QuoteItem[]);
+        } else {
+          if (itemsError) {
+            console.warn(
+              "Quote items load issue (treating as empty):",
+              itemsError
+            );
+          }
+          setItems([]);
+        }
       } catch (err) {
         console.error("Unexpected error loading quote", err);
         setError("Something went wrong loading this quote.");
@@ -155,7 +149,6 @@ if (!itemsError && itemsData) {
     loadData();
   }, [router, params.id]);
 
-  // Calculations
   const calculatedSubtotal = items.reduce((sum, item) => {
     const qty = item.quantity ?? 0;
     const price = item.unit_price ?? 0;
@@ -165,7 +158,7 @@ if (!itemsError && itemsData) {
   const subtotal = quote?.subtotal ?? calculatedSubtotal;
   const gst =
     quote?.gst ??
-    Math.round((subtotal * 0.1 + Number.EPSILON) * 100) / 100; // 10% GST
+    Math.round((subtotal * 0.1 + Number.EPSILON) * 100) / 100;
   const total = quote?.total ?? subtotal + gst;
   const status = quote?.status ?? (total > 0 ? "Draft" : "New");
 
@@ -176,52 +169,49 @@ if (!itemsError && itemsData) {
       setConverting(true);
       setError(null);
 
-      // Check user again in case session expired
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
 
       if (userError) {
-  console.error("Error loading user in convert", userError);
-}
+        console.error("Error loading user in convert", userError);
+      }
 
       if (!user) {
         router.push("/auth/login");
         return;
       }
 
-      // 1) Create invoice row
       const { data: invoiceData, error: invoiceError } = await supabase
-  .from("invoices")
-  .insert({
-    user_id: user.id,
-    client_id: quote.client_id,
-    title: quote.title || `Invoice from quote ${quote.id}`,
-    status: "Draft",
-    issue_date: new Date().toISOString(),
-    due_date: quote.due_date,
-    subtotal,
-    gst,
-    total,
-    notes: quote.notes,
-  })
-  .select()
-  .single();
+        .from("invoices")
+        .insert({
+          user_id: user.id,
+          client_id: quote.client_id,
+          title: quote.title || "Untitled Invoice",
+          status: "Draft",
+          issue_date: new Date().toISOString(),
+          due_date: quote.due_date,
+          subtotal,
+          gst,
+          total,
+          notes: quote.notes,
+        })
+        .select()
+        .single();
 
       if (invoiceError || !invoiceData) {
-        console.error("Error creating invoice", {
-          message: invoiceError?.message,
-          details: invoiceError?.details,
-          hint: invoiceError?.hint,
-        });
-        setError("Failed to create invoice from this quote.");
+        console.error("Error creating invoice", invoiceError);
+        setError(
+          invoiceError?.message ||
+            invoiceError?.details ||
+            "Failed to create invoice from this quote."
+        );
         return;
       }
 
       const newInvoiceId = invoiceData.id;
 
-      // 2) Copy line items into invoice_items
       if (items.length > 0) {
         const invoiceItems = items.map((item) => {
           const qty = item.quantity ?? 0;
@@ -244,18 +234,13 @@ if (!itemsError && itemsData) {
           .insert(invoiceItems);
 
         if (invoiceItemsError) {
-          console.error("Error creating invoice items", {
-            message: invoiceItemsError.message,
-            details: invoiceItemsError.details,
-            hint: invoiceItemsError.hint,
-          });
+          console.error("Error creating invoice items", invoiceItemsError);
           setError(
             "Invoice was created, but some line items may not have copied across."
           );
         }
       }
 
-      // 3) Redirect to the new invoice detail page
       router.push(`/invoices/${newInvoiceId}`);
     } catch (err) {
       console.error("Unexpected error converting to invoice", err);
@@ -265,36 +250,115 @@ if (!itemsError && itemsData) {
     }
   };
 
+  const handleDeleteQuote = async () => {
+  if (!quote) return;
+
+  const confirmed = window.confirm(
+    "Delete this quote permanently? Any linked jobs will just lose the quote link. This cannot be undone."
+  );
+  if (!confirmed) return;
+
+  try {
+    setDeleting(true);
+    setError(null);
+
+    // Make sure user is authenticated (RLS safety)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error("Error loading user for delete", userError);
+      setError("Unable to verify user.");
+      setDeleting(false);
+      return;
+    }
+
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    // 1) Detach any jobs that reference this quote
+    const { error: jobsError } = await supabase
+      .from("jobs")
+      .update({ quote_id: null })
+      .eq("quote_id", quote.id);
+
+    if (jobsError) {
+      console.error("Error detaching jobs from quote", {
+        message: jobsError.message,
+        details: jobsError.details,
+        hint: jobsError.hint,
+      });
+      setError("Failed to detach linked jobs from this quote.");
+      setDeleting(false);
+      return;
+    }
+
+    // 2) Delete the quote itself (id + user_id for safety with RLS)
+    const { error: deleteError } = await supabase
+      .from("quotes")
+      .delete()
+      .eq("id", quote.id)
+      .eq("user_id", user.id);
+
+    if (deleteError) {
+      console.error("Error deleting quote", {
+        message: deleteError.message,
+        details: deleteError.details,
+        hint: deleteError.hint,
+      });
+      setError(deleteError.message || "Failed to delete quote.");
+      setDeleting(false);
+      return;
+    }
+
+    // 3) Back to quotes list
+    router.push("/quotes");
+  } catch (err) {
+    console.error("Unexpected error deleting quote", err);
+    setError("Failed to delete quote.");
+  } finally {
+    setDeleting(false);
+  }
+};
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <p className="text-slate-300 text-sm">Loading quote...</p>
-      </div>
+      <DashboardLayout>
+        <div className="min-h-[60vh] flex items-center justify-center text-slate-300 text-sm">
+          Loading quote...
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (error && !quote) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-sm text-red-400 mb-3">
-            {error || "Quote not found."}
-          </p>
-          <Link
-            href="/quotes"
-            className="text-sm text-emerald-400 hover:text-emerald-300"
-          >
-            ← Back to Quotes
-          </Link>
+      <DashboardLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-sm text-red-400 mb-3">
+              {error || "Quote not found."}
+            </p>
+            <Link
+              href="/quotes"
+              className="text-sm text-emerald-400 hover:text-emerald-300"
+            >
+              ← Back to Quotes
+            </Link>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   if (!quote) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <DashboardLayout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back + Status */}
         <div className="mb-6 flex items-center justify-between gap-4">
@@ -336,7 +400,6 @@ if (!itemsError && itemsData) {
           </div>
 
           <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-            {/* Edit placeholder */}
             <Link
               href={`/quotes/${quote.id}/edit`}
               className="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-50 shadow-sm hover:bg-slate-750 hover:border-slate-500 transition-colors"
@@ -344,7 +407,6 @@ if (!itemsError && itemsData) {
               Edit Quote
             </Link>
 
-            {/* Convert to Invoice */}
             <button
               type="button"
               onClick={handleConvertToInvoice}
@@ -352,6 +414,15 @@ if (!itemsError && itemsData) {
               className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               {converting ? "Converting..." : "Convert to Invoice"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeleteQuote}
+              disabled={deleting}
+              className="inline-flex items-center justify-center rounded-lg bg-red-500/20 border border-red-500/60 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/30 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              {deleting ? "Deleting..." : "Delete Quote"}
             </button>
           </div>
         </div>
@@ -493,6 +564,6 @@ if (!itemsError && itemsData) {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
