@@ -138,20 +138,19 @@ export default function NewInvoicePage() {
         gst,
         total,
         amount_paid: 0,
-        items: parsedItems, // ← JSONB column
+        items: parsedItems, // JSONB column
         notes: notes || null,
         title: title || null,
       };
 
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from("invoices")
-        .insert([payload])
-        .select("id")
-        .single();
+        .insert([payload]);
 
       if (insertError) throw insertError;
 
-      router.push(`/invoices/${data.id}`);
+      // ✅ After creating invoice, go back to the invoices list
+      router.push("/invoices");
     } catch (e: any) {
       console.error("Save invoice error:", e);
       setError(e?.message || "Failed to save invoice.");
@@ -171,7 +170,11 @@ export default function NewInvoicePage() {
     setLineItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof LineItem, value: string) => {
+  const updateLineItem = (
+    index: number,
+    field: keyof LineItem,
+    value: string
+  ) => {
     setLineItems((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };

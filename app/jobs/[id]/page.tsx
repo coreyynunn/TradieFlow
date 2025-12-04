@@ -430,24 +430,10 @@ export default function JobDetailPage() {
                 onClick={() => router.push(`/jobs/${job.id}/edit`)}
                 className="h-8 px-3 rounded-md bg-neutral-100 text-neutral-900 text-xs font-medium hover:bg-white border border-neutral-300 transition"
               >
-                Edit job
-              </button>
-              {job.quote_id && (
-                <button
-                  onClick={() => router.push(`/quotes/${job.quote_id}`)}
-                  className="h-8 px-3 rounded-md bg-neutral-900 text-neutral-100 text-xs font-medium hover:bg-neutral-800 border border-neutral-700 transition"
-                >
-                  View quote
-                </button>
-              )}
-              {client && (
-                <button
-                  onClick={() => router.push(`/clients/${client.id}`)}
-                  className="h-8 px-3 rounded-md bg-neutral-900 text-neutral-100 text-xs font-medium hover:bg-neutral-800 border border-neutral-700 transition"
-                >
+                
                   View client
                 </button>
-              )}
+              
               <button
                 onClick={handleDelete}
                 disabled={deleting}
