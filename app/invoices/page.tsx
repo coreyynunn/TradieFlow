@@ -12,6 +12,7 @@ type Invoice = {
   issue_date: string | null;
   due_date: string | null;
   total: number | null;
+  title?: string | null; // 👈 added
 };
 
 type Client = {
@@ -160,6 +161,8 @@ export default function InvoicesPage() {
               badgeBg = "bg-neutral-900/60 border-neutral-600";
             }
 
+            const title = inv.title || `Invoice #${idStr}`;
+
             return (
               <button
                 key={idStr}
@@ -168,7 +171,7 @@ export default function InvoicesPage() {
               >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-neutral-50">
-                    Invoice #{idStr}
+                    {title}
                   </span>
                   <span className="text-xs text-neutral-400">
                     {clientName} · Issued {issue}
