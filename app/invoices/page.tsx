@@ -12,7 +12,7 @@ type Invoice = {
   issue_date: string | null;
   due_date: string | null;
   total: number | null;
-  title?: string | null; // 👈 added
+  title?: string | null; // optional title
 };
 
 type Client = {
@@ -70,7 +70,7 @@ export default function InvoicesPage() {
         }
 
         const map: Record<string, string> = {};
-        (clientsData || []).forEach((c: any) => {
+        (clientsData || []).forEach((c: Client) => {
           map[String(c.id)] = c.name;
         });
 
@@ -89,6 +89,10 @@ export default function InvoicesPage() {
 
   const handleRowClick = (id: number | string) => {
     router.push(`/invoices/${id}`);
+  };
+
+  const handleNewInvoice = () => {
+    router.push("/invoices/new");
   };
 
   if (loading) {
@@ -119,14 +123,23 @@ export default function InvoicesPage() {
             Invoices created from your quotes. Click one to view or update.
           </p>
         </div>
-        {/* Later: a standalone "New invoice" if we want */}
+
+        <button
+          type="button"
+          onClick={handleNewInvoice}
+          className="inline-flex items-center gap-2 rounded-full border border-blue-500/70 bg-blue-600/80 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-500 hover:border-blue-400 transition"
+        >
+          <span className="text-base leading-none">＋</span>
+          <span>New Invoice</span>
+        </button>
       </div>
 
       {/* List */}
       <div className="space-y-2">
         {invoices.length === 0 ? (
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 px-4 py-4 text-sm text-neutral-500">
-            No invoices yet. Create one from a quote.
+            No invoices yet. Create one from a quote or use{" "}
+            <span className="font-medium text-neutral-300">New Invoice</span>.
           </div>
         ) : (
           invoices.map((inv) => {
