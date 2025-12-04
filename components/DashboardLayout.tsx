@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { label: "Quotes", href: "/quotes" },
     { label: "Jobs", href: "/jobs" },
     { label: "Invoices", href: "/invoices" },
-    { label: "Settings", href: "/setting" },
+    { label: "Settings", href: "/settings" },
   ];
 
   const navItems = isAdmin
