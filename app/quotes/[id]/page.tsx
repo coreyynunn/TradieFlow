@@ -238,7 +238,7 @@ export default function QuoteDetailPage() {
 
             {/* Convert to Invoice placeholder */}
             <Link
-              href={`/invoices/new?fromQuote=${quote.id}`}
+              href="/invoices/new"
               className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 transition-colors"
             >
               Convert to Invoice
