@@ -183,11 +183,8 @@ if (!itemsError && itemsData) {
       } = await supabase.auth.getUser();
 
       if (userError) {
-        console.error("Error loading user in convert", {
-          message: userError.message,
-          ...userError,
-        });
-      }
+  console.error("Error loading user in convert", userError);
+}
 
       if (!user) {
         router.push("/auth/login");
