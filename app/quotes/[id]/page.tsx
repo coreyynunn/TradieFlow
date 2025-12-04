@@ -78,11 +78,8 @@ export default function QuoteDetailPage() {
         } = await supabase.auth.getUser();
 
         if (userError) {
-          console.error("Error loading user", {
-            message: userError.message,
-            ...userError,
-          });
-        }
+  console.error("Error loading user", userError);
+}
 
         if (!user) {
           router.push("/auth/login");
