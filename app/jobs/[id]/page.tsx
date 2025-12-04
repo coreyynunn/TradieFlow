@@ -502,7 +502,7 @@ export default function JobDetailPage() {
             }}
             className="md:col-span-2 p-4 rounded-xl border border-neutral-800 bg-neutral-900/60 space-y-3 cursor-pointer hover:border-neutral-600 hover:bg-neutral-900/80 transition"
           >
-            <div className="flex items-center justify_between">
+            <div className="flex items-center justify-between">
               <div className="text-xs text-neutral-500 uppercase">
                 Job details
               </div>
