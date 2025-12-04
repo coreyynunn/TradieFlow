@@ -140,7 +140,7 @@ export default function QuoteDetailPage() {
   .select("*")
   .eq("quote_id", quoteData.id);
 
-// If the table/rows don't exist or there’s an error, just treat it as empty for now
+// If table/rows don’t exist or there’s an error, just treat as empty for now
 if (!itemsError && itemsData) {
   setItems(itemsData as QuoteItem[]);
 } else {
@@ -199,21 +199,21 @@ if (!itemsError && itemsData) {
 
       // 1) Create invoice row
       const { data: invoiceData, error: invoiceError } = await supabase
-        .from("invoices")
-        .insert({
-          user_id: user.id,
-          client_id: quote.client_id,
-          title: quote.title || `Invoice from quote ${quote.id}`,
-          status: "Draft",
-          issue_date: new Date().toISOString(),
-          due_date: quote.due_date,
-          subtotal,
-          gst,
-          total,
-          notes: quote.notes,
-        })
-        .select()
-        .single();
+  .from("invoices")
+  .insert({
+    user_id: user.id,
+    client_id: quote.client_id,
+    title: quote.title || `Invoice from quote ${quote.id}`,
+    status: "Draft",
+    issue_date: new Date().toISOString(),
+    due_date: quote.due_date,
+    subtotal,
+    gst,
+    total,
+    notes: quote.notes,
+  })
+  .select()
+  .single();
 
       if (invoiceError || !invoiceData) {
         console.error("Error creating invoice", {
