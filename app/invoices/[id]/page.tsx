@@ -32,7 +32,7 @@ type Client = {
 
 type EditableItem = {
   description: string;
-  quantity: string;
+  quantity: string; // string for inputs
   unit_price: string;
 };
 
@@ -76,6 +76,7 @@ export default function InvoiceDetailPage() {
   const [editNotes, setEditNotes] = useState("");
   const [editItems, setEditItems] = useState<EditableItem[]>([]);
 
+  // ----------------- LOAD INVOICE -----------------
   useEffect(() => {
     if (!id) return;
 
@@ -120,10 +121,10 @@ export default function InvoiceDetailPage() {
             .maybeSingle();
 
           if (clientError) throw clientError;
-          setClient(clientData as Client);
+          if (clientData) setClient(clientData as Client);
         }
 
-        // Prepare edit state
+        // Prepare edit state from invoice
         const rawItems = (inv.items || []) as any[];
         const editableItems: EditableItem[] = rawItems.map((item: any) => {
           const qty =
@@ -154,9 +155,7 @@ export default function InvoiceDetailPage() {
 
         setEditTitle(inv.title || "");
         setEditStatus((inv.status || "draft").toLowerCase());
-        setEditIssueDate(
-          inv.issue_date ? inv.issue_date.slice(0, 10) : ""
-        );
+        setEditIssueDate(inv.issue_date ? inv.issue_date.slice(0, 10) : "");
         setEditDueDate(inv.due_date ? inv.due_date.slice(0, 10) : "");
         setEditNotes(inv.notes || "");
         setEditItems(editableItems);
@@ -171,6 +170,7 @@ export default function InvoiceDetailPage() {
     load();
   }, [id, router]);
 
+  // ----------------- NORMALIZED ITEMS + TOTALS -----------------
   const normalizedItems = useMemo(() => {
     return editItems.map((item) => {
       const qty = Number(item.quantity || 0) || 0;
@@ -185,6 +185,19 @@ export default function InvoiceDetailPage() {
       };
     });
   }, [editItems]);
+
+  // "Real" line items = have description OR positive total
+  const hasRealLineItems = useMemo(
+    () =>
+      normalizedItems.some((item) => {
+        const hasDesc =
+          typeof item.description === "string" &&
+          item.description.trim().length > 0;
+        const hasPositiveTotal = (item.total ?? 0) > 0;
+        return hasDesc || hasPositiveTotal;
+      }),
+    [normalizedItems]
+  );
 
   const computedSubtotal = useMemo(
     () => normalizedItems.reduce((sum, item) => sum + (item.total || 0), 0),
@@ -201,6 +214,7 @@ export default function InvoiceDetailPage() {
     [computedSubtotal, computedGst]
   );
 
+  // ----------------- STYLES + HANDLERS -----------------
   const getStatusStyles = (status: string | null | undefined) => {
     const raw = (status || "draft").toLowerCase();
     let statusLabel = raw.toUpperCase();
@@ -264,9 +278,7 @@ export default function InvoiceDetailPage() {
     setEditIssueDate(
       invoice.issue_date ? invoice.issue_date.slice(0, 10) : ""
     );
-    setEditDueDate(
-      invoice.due_date ? invoice.due_date.slice(0, 10) : ""
-    );
+    setEditDueDate(invoice.due_date ? invoice.due_date.slice(0, 10) : "");
     setEditNotes(invoice.notes || "");
 
     const rawItems = (invoice.items || []) as any[];
@@ -310,15 +322,6 @@ export default function InvoiceDetailPage() {
     try {
       const statusLower = (editStatus || "draft").toLowerCase();
 
-      // Do we actually have meaningful line items?
-      const hasLineItems = normalizedItems.some((item) => {
-        return (
-          (item.description && item.description.trim().length > 0) ||
-          item.quantity > 0 ||
-          item.unit_price > 0
-        );
-      });
-
       // Base payload: meta fields only
       const payload: any = {
         title: editTitle || null,
@@ -331,8 +334,8 @@ export default function InvoiceDetailPage() {
       // Start from existing DB total
       let effectiveTotal = Number(invoice.total ?? 0);
 
-      // Only overwrite items + totals if there are real line items
-      if (hasLineItems) {
+      // Only overwrite items + totals if there are REAL line items
+      if (hasRealLineItems) {
         payload.items = normalizedItems;
         payload.subtotal = computedSubtotal;
         payload.gst = computedGst;
@@ -343,8 +346,10 @@ export default function InvoiceDetailPage() {
       // If marking as PAID, set amount_paid sensibly
       if (statusLower === "paid") {
         const existingPaid = Number(invoice.amount_paid ?? 0);
-        payload.amount_paid =
-          existingPaid > 0 ? existingPaid : effectiveTotal;
+        if (effectiveTotal > 0) {
+          payload.amount_paid =
+            existingPaid > 0 ? existingPaid : effectiveTotal;
+        }
       }
 
       const { data, error: updateError } = await supabase
@@ -368,6 +373,7 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  // ----------------- LOADING / ERROR -----------------
   if (loading) {
     return (
       <DashboardLayout>
@@ -398,9 +404,7 @@ export default function InvoiceDetailPage() {
   if (!invoice) {
     return (
       <DashboardLayout>
-        <div className="text-neutral-400 text-sm">
-          Invoice not found.
-        </div>
+        <div className="text-neutral-400 text-sm">Invoice not found.</div>
       </DashboardLayout>
     );
   }
@@ -412,35 +416,36 @@ export default function InvoiceDetailPage() {
   const displayTitle =
     invoice.title || `Invoice #${String(invoice.id)}`;
 
+  // ⬇️ KEY FIX: only use computed totals when there are real line items
   const displaySubtotal =
-    editing ? computedSubtotal : invoice.subtotal ?? 0;
-  const displayGst = editing ? computedGst : invoice.gst ?? 0;
-  const displayTotal = editing ? computedTotal : invoice.total ?? 0;
+    editing && hasRealLineItems ? computedSubtotal : invoice.subtotal ?? 0;
+  const displayGst =
+    editing && hasRealLineItems ? computedGst : invoice.gst ?? 0;
+  const displayTotal =
+    editing && hasRealLineItems ? computedTotal : invoice.total ?? 0;
 
-  const itemsToRender = editing
-    ? normalizedItems
-    : ((invoice.items || []) as any[]).map((item: any) => {
-        const qty =
-          item.quantity ??
-          item.qty ??
-          item.q ??
-          0;
-        const unitPrice =
-          item.unit_price ??
-          item.unitPrice ??
-          item.price ??
-          0;
-        const lineTotal =
-          item.total ?? qty * unitPrice ?? 0;
+  const itemsToRender = ((invoice.items || []) as any[]).map((item: any) => {
+    const qty =
+      item.quantity ??
+      item.qty ??
+      item.q ??
+      0;
+    const unitPrice =
+      item.unit_price ??
+      item.unitPrice ??
+      item.price ??
+      0;
+    const lineTotal = item.total ?? qty * unitPrice ?? 0;
 
-        return {
-          description: item.description ?? "",
-          quantity: qty,
-          unit_price: unitPrice,
-          total: lineTotal,
-        };
-      });
+    return {
+      description: item.description ?? "",
+      quantity: qty,
+      unit_price: unitPrice,
+      total: lineTotal,
+    };
+  });
 
+  // ----------------- RENDER -----------------
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -527,14 +532,10 @@ export default function InvoiceDetailPage() {
               <>
                 <p className="text-sm text-neutral-100">{client.name}</p>
                 {client.email && (
-                  <p className="text-xs text-neutral-400">
-                    {client.email}
-                  </p>
+                  <p className="text-xs text-neutral-400">{client.email}</p>
                 )}
                 {client.phone && (
-                  <p className="text-xs text-neutral-400">
-                    {client.phone}
-                  </p>
+                  <p className="text-xs text-neutral-400">{client.phone}</p>
                 )}
               </>
             ) : (
@@ -580,9 +581,7 @@ export default function InvoiceDetailPage() {
               {editing ? (
                 <select
                   value={editStatus}
-                  onChange={(e) =>
-                    setEditStatus(e.target.value)
-                  }
+                  onChange={(e) => setEditStatus(e.target.value)}
                   className="bg-neutral-950 border border-neutral-700 rounded px-2 py-1 text-[11px] text-neutral-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="draft">Draft</option>
@@ -592,9 +591,7 @@ export default function InvoiceDetailPage() {
                   <option value="cancelled">Cancelled</option>
                 </select>
               ) : (
-                <span className="text-neutral-100">
-                  {statusLabel}
-                </span>
+                <span className="text-neutral-100">{statusLabel}</span>
               )}
             </div>
           </div>
@@ -617,7 +614,9 @@ export default function InvoiceDetailPage() {
             )}
           </div>
 
-          {itemsToRender.length === 0 ? (
+          {(!invoice.items || invoice.items.length === 0) &&
+          !hasRealLineItems &&
+          !editing ? (
             <p className="text-xs text-neutral-400">
               No line items stored on this invoice.
             </p>
@@ -633,10 +632,8 @@ export default function InvoiceDetailPage() {
 
               {editing
                 ? editItems.map((item, index) => {
-                    const qtyNum =
-                      Number(item.quantity || 0) || 0;
-                    const priceNum =
-                      Number(item.unit_price || 0) || 0;
+                    const qtyNum = Number(item.quantity || 0) || 0;
+                    const priceNum = Number(item.unit_price || 0) || 0;
                     const lineTotal = qtyNum * priceNum;
 
                     return (
@@ -694,9 +691,7 @@ export default function InvoiceDetailPage() {
                           </span>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleRemoveItem(index)
-                            }
+                            onClick={() => handleRemoveItem(index)}
                             className="text-[10px] text-red-400 hover:text-red-300 ml-2"
                           >
                             Remove
