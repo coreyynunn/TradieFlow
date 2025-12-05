@@ -49,11 +49,6 @@ export default function JobsBoardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // drag state
-  const [draggingJobId, setDraggingJobId] = useState<number | string | null>(
-    null
-  );
-
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -133,11 +128,9 @@ export default function JobsBoardPage() {
     load();
   }, [router]);
 
-  // Derived columns
-  const quotedQuotes = quotes.filter((q) => {
-    const s = (q.status || "draft").toLowerCase();
-    return s === "draft" || s === "sent";
-  });
+    // Derived columns
+  // Show ALL quotes in the Quoted column
+  const quotedQuotes = quotes;
 
   const pendingJobs = jobs.filter(
     (j) => (j.status || "pending").toLowerCase() === "pending"
@@ -148,44 +141,6 @@ export default function JobsBoardPage() {
   const completedJobs = jobs.filter(
     (j) => (j.status || "").toLowerCase() === "completed"
   );
-
-  function handleJobDragStart(id: number | string) {
-    setDraggingJobId(id);
-  }
-
-  function handleColumnDragOver(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault();
-  }
-
-  async function handleColumnDrop(newStatus: string) {
-    if (!draggingJobId) return;
-
-    const jobId = draggingJobId;
-    setDraggingJobId(null);
-
-    try {
-      const { error } = await supabase
-        .from("jobs")
-        .update({ status: newStatus })
-        .eq("id", jobId);
-
-      if (error) {
-        console.error("Move job error", error);
-        alert("Error moving job.");
-        return;
-      }
-
-      // update local state
-      setJobs((prev) =>
-        prev.map((j) =>
-          String(j.id) === String(jobId) ? { ...j, status: newStatus } : j
-        )
-      );
-    } catch (e: any) {
-      console.error("Move job error", e);
-      alert("Error moving job.");
-    }
-  }
 
   if (loading) {
     return (
@@ -274,14 +229,8 @@ export default function JobsBoardPage() {
           )}
         </Column>
 
-        {/* Pending column (jobs, droppable) */}
-        <Column
-          title="Pending"
-          itemsCount={pendingJobs.length}
-          droppable
-          onDrop={() => handleColumnDrop("pending")}
-          onDragOver={handleColumnDragOver}
-        >
+        {/* Pending column (jobs) */}
+        <Column title="Pending" itemsCount={pendingJobs.length}>
           {pendingJobs.length === 0 ? (
             <EmptyColumn text="No pending jobs." />
           ) : (
@@ -301,8 +250,6 @@ export default function JobsBoardPage() {
                 <button
                   key={job.id}
                   onClick={() => router.push(`/jobs/${job.id}`)}
-                  draggable
-                  onDragStart={() => handleJobDragStart(job.id)}
                   className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
                 >
                   <div className="text-xs font-medium text-neutral-50">
@@ -320,14 +267,8 @@ export default function JobsBoardPage() {
           )}
         </Column>
 
-        {/* Active column (jobs, droppable) */}
-        <Column
-          title="Active"
-          itemsCount={activeJobs.length}
-          droppable
-          onDrop={() => handleColumnDrop("active")}
-          onDragOver={handleColumnDragOver}
-        >
+        {/* Active column (jobs) */}
+        <Column title="Active" itemsCount={activeJobs.length}>
           {activeJobs.length === 0 ? (
             <EmptyColumn text="No active jobs." />
           ) : (
@@ -347,8 +288,6 @@ export default function JobsBoardPage() {
                 <button
                   key={job.id}
                   onClick={() => router.push(`/jobs/${job.id}`)}
-                  draggable
-                  onDragStart={() => handleJobDragStart(job.id)}
                   className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
                 >
                   <div className="text-xs font-medium text-neutral-50">
@@ -366,14 +305,8 @@ export default function JobsBoardPage() {
           )}
         </Column>
 
-        {/* Completed column (jobs, droppable) */}
-        <Column
-          title="Completed"
-          itemsCount={completedJobs.length}
-          droppable
-          onDrop={() => handleColumnDrop("completed")}
-          onDragOver={handleColumnDragOver}
-        >
+        {/* Completed column (jobs) */}
+        <Column title="Completed" itemsCount={completedJobs.length}>
           {completedJobs.length === 0 ? (
             <EmptyColumn text="No completed jobs yet." />
           ) : (
@@ -393,8 +326,6 @@ export default function JobsBoardPage() {
                 <button
                   key={job.id}
                   onClick={() => router.push(`/jobs/${job.id}`)}
-                  draggable
-                  onDragStart={() => handleJobDragStart(job.id)}
                   className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
                 >
                   <div className="text-xs font-medium text-neutral-50">
@@ -420,30 +351,13 @@ function Column({
   title,
   itemsCount,
   children,
-  droppable,
-  onDrop,
-  onDragOver,
 }: {
   title: string;
   itemsCount: number;
   children: React.ReactNode;
-  droppable?: boolean;
-  onDrop?: () => void;
-  onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
 }) {
   return (
-    <div
-      className="flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-3 min-h-[200px]"
-      onDragOver={droppable ? onDragOver : undefined}
-      onDrop={
-        droppable
-          ? (e) => {
-              e.preventDefault();
-              onDrop && onDrop();
-            }
-          : undefined
-      }
-    >
+    <div className="flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-3 min-h-[200px]">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs font-semibold text-neutral-100 uppercase tracking-wide">
           {title}
