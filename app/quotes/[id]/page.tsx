@@ -250,6 +250,58 @@ export default function QuoteDetailPage() {
     }
   };
 
+  const handleConvertToJob = async () => {
+  if (!quote) return;
+
+  try {
+    setConverting(true);
+    setError(null);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError) {
+      console.error("Error loading user in convert", userError);
+    }
+
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    // Create the job
+    const { data: jobData, error: jobError } = await supabase
+      .from("jobs")
+      .insert({
+        user_id: user.id,
+        client_id: quote.client_id,
+        quote_id: quote.id,
+        title: quote.title || "Untitled Job",
+        status: "pending",
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (jobError || !jobData) {
+      console.error("Error creating job", jobError);
+      setError(jobError?.message || "Failed to convert quote to job.");
+      return;
+    }
+
+    // Redirect to job page
+    router.push(`/jobs/${jobData.id}`);
+
+  } catch (err) {
+    console.error("Unexpected error converting to job", err);
+    setError("Something went wrong converting this quote.");
+  } finally {
+    setConverting(false);
+  }
+};
+
   const handleDeleteQuote = async () => {
   if (!quote) return;
 
@@ -408,13 +460,22 @@ export default function QuoteDetailPage() {
             </Link>
 
             <button
-              type="button"
-              onClick={handleConvertToInvoice}
-              disabled={converting}
-              className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-            >
-              {converting ? "Converting..." : "Convert to Invoice"}
-            </button>
+  type="button"
+  onClick={handleConvertToJob}
+  disabled={converting}
+  className="inline-flex items-center justify-center rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-blue-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+>
+  {converting ? "Creating Job..." : "Convert to Job"}
+</button>
+
+<button
+  type="button"
+  onClick={handleConvertToInvoice}
+  disabled={converting}
+  className="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow-sm hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+>
+  {converting ? "Converting..." : "Convert to Invoice"}
+</button>
 
             <button
               type="button"

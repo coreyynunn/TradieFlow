@@ -32,7 +32,7 @@ type Client = {
 
 type EditableItem = {
   description: string;
-  quantity: string; // keep as string for inputs
+  quantity: string;
   unit_price: string;
 };
 
@@ -308,22 +308,44 @@ export default function InvoiceDetailPage() {
     setError(null);
 
     try {
-      const payload: Partial<Invoice> & {
-        items: any[];
-        subtotal: number;
-        gst: number;
-        total: number;
-      } = {
+      const statusLower = (editStatus || "draft").toLowerCase();
+
+      // Do we actually have meaningful line items?
+      const hasLineItems = normalizedItems.some((item) => {
+        return (
+          (item.description && item.description.trim().length > 0) ||
+          item.quantity > 0 ||
+          item.unit_price > 0
+        );
+      });
+
+      // Base payload: meta fields only
+      const payload: any = {
         title: editTitle || null,
-        status: editStatus,
+        status: statusLower,
         issue_date: editIssueDate || null,
         due_date: editDueDate || null,
         notes: editNotes || null,
-        items: normalizedItems,
-        subtotal: computedSubtotal,
-        gst: computedGst,
-        total: computedTotal,
       };
+
+      // Start from existing DB total
+      let effectiveTotal = Number(invoice.total ?? 0);
+
+      // Only overwrite items + totals if there are real line items
+      if (hasLineItems) {
+        payload.items = normalizedItems;
+        payload.subtotal = computedSubtotal;
+        payload.gst = computedGst;
+        payload.total = computedTotal;
+        effectiveTotal = computedTotal;
+      }
+
+      // If marking as PAID, set amount_paid sensibly
+      if (statusLower === "paid") {
+        const existingPaid = Number(invoice.amount_paid ?? 0);
+        payload.amount_paid =
+          existingPaid > 0 ? existingPaid : effectiveTotal;
+      }
 
       const { data, error: updateError } = await supabase
         .from("invoices")

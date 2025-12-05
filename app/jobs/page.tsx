@@ -49,6 +49,16 @@ export default function JobsBoardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // drag state
+  const [draggingJobId, setDraggingJobId] = useState<number | string | null>(
+    null
+  );
+
+  // status update state
+  const [updatingJobId, setUpdatingJobId] = useState<number | string | null>(
+    null
+  );
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -128,8 +138,7 @@ export default function JobsBoardPage() {
     load();
   }, [router]);
 
-    // Derived columns
-  // Show ALL quotes in the Quoted column
+  // 🔹 Show ALL quotes in the Quoted column
   const quotedQuotes = quotes;
 
   const pendingJobs = jobs.filter(
@@ -141,6 +150,50 @@ export default function JobsBoardPage() {
   const completedJobs = jobs.filter(
     (j) => (j.status || "").toLowerCase() === "completed"
   );
+
+  function handleJobDragStart(id: number | string) {
+    setDraggingJobId(id);
+  }
+
+  function handleColumnDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+  }
+
+  async function updateJobStatus(jobId: number | string, newStatus: string) {
+    setUpdatingJobId(jobId);
+    try {
+      const { data, error } = await supabase
+        .from("jobs")
+        .update({ status: newStatus })
+        .eq("id", jobId)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Update job status error", error);
+        alert("Error updating job status.");
+        return;
+      }
+
+      setJobs((prev) =>
+        prev.map((j) =>
+          String(j.id) === String(jobId) ? { ...(j as Job), ...(data as Job) } : j
+        )
+      );
+    } catch (e: any) {
+      console.error("Update job status error", e);
+      alert("Error updating job status.");
+    } finally {
+      setUpdatingJobId(null);
+    }
+  }
+
+  async function handleColumnDrop(newStatus: string) {
+    if (!draggingJobId) return;
+    const jobId = draggingJobId;
+    setDraggingJobId(null);
+    await updateJobStatus(jobId, newStatus);
+  }
 
   if (loading) {
     return (
@@ -189,7 +242,7 @@ export default function JobsBoardPage() {
 
       {/* Pipeline */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Quoted column (quotes only) */}
+        {/* Quoted column (quotes only, not droppable) */}
         <Column title="Quoted" itemsCount={quotedQuotes.length}>
           {quotedQuotes.length === 0 ? (
             <EmptyColumn text="No quoted jobs yet." />
@@ -229,8 +282,14 @@ export default function JobsBoardPage() {
           )}
         </Column>
 
-        {/* Pending column (jobs) */}
-        <Column title="Pending" itemsCount={pendingJobs.length}>
+        {/* Pending column (jobs, droppable) */}
+        <Column
+          title="Pending"
+          itemsCount={pendingJobs.length}
+          droppable
+          onDrop={() => handleColumnDrop("pending")}
+          onDragOver={handleColumnDragOver}
+        >
           {pendingJobs.length === 0 ? (
             <EmptyColumn text="No pending jobs." />
           ) : (
@@ -247,28 +306,40 @@ export default function JobsBoardPage() {
                 clientsMap[String(job.client_id ?? "")] || "Unknown client";
 
               return (
-                <button
+                <div
                   key={job.id}
-                  onClick={() => router.push(`/jobs/${job.id}`)}
-                  className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
+                  draggable
+                  onDragStart={() => handleJobDragStart(job.id)}
                 >
-                  <div className="text-xs font-medium text-neutral-50">
-                    {job.title || `Job #${job.id}`}
-                  </div>
-                  <div className="text-[11px] text-neutral-400 mt-0.5">
-                    {clientName}
-                  </div>
-                  <div className="text-[11px] text-neutral-500 mt-1">
-                    Created {created}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => router.push(`/jobs/${job.id}`)}
+                    className="w-full text-left"
+                  >
+                    <div className="text-xs font-medium text-neutral-50">
+                      {job.title || `Job #${job.id}`}
+                    </div>
+                    <div className="text-[11px] text-neutral-400 mt-0.5">
+                      {clientName}
+                    </div>
+                    <div className="text-[11px] text-neutral-500 mt-1">
+                      Created {created}
+                    </div>
+                  </button>
+                </div>
               );
             })
           )}
         </Column>
 
-        {/* Active column (jobs) */}
-        <Column title="Active" itemsCount={activeJobs.length}>
+        {/* Active column (jobs, droppable) */}
+        <Column
+          title="Active"
+          itemsCount={activeJobs.length}
+          droppable
+          onDrop={() => handleColumnDrop("active")}
+          onDragOver={handleColumnDragOver}
+        >
           {activeJobs.length === 0 ? (
             <EmptyColumn text="No active jobs." />
           ) : (
@@ -285,28 +356,40 @@ export default function JobsBoardPage() {
                 clientsMap[String(job.client_id ?? "")] || "Unknown client";
 
               return (
-                <button
+                <div
                   key={job.id}
-                  onClick={() => router.push(`/jobs/${job.id}`)}
-                  className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
+                  draggable
+                  onDragStart={() => handleJobDragStart(job.id)}
                 >
-                  <div className="text-xs font-medium text-neutral-50">
-                    {job.title || `Job #${job.id}`}
-                  </div>
-                  <div className="text-[11px] text-neutral-400 mt-0.5">
-                    {clientName}
-                  </div>
-                  <div className="text-[11px] text-neutral-500 mt-1">
-                    Created {created}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => router.push(`/jobs/${job.id}`)}
+                    className="w-full text-left"
+                  >
+                    <div className="text-xs font-medium text-neutral-50">
+                      {job.title || `Job #${job.id}`}
+                    </div>
+                    <div className="text-[11px] text-neutral-400 mt-0.5">
+                      {clientName}
+                    </div>
+                    <div className="text-[11px] text-neutral-500 mt-1">
+                      Created {created}
+                    </div>
+                  </button>
+                </div>
               );
             })
           )}
         </Column>
 
-        {/* Completed column (jobs) */}
-        <Column title="Completed" itemsCount={completedJobs.length}>
+        {/* Completed column (jobs, droppable) */}
+        <Column
+          title="Completed"
+          itemsCount={completedJobs.length}
+          droppable
+          onDrop={() => handleColumnDrop("completed")}
+          onDragOver={handleColumnDragOver}
+        >
           {completedJobs.length === 0 ? (
             <EmptyColumn text="No completed jobs yet." />
           ) : (
@@ -323,21 +406,27 @@ export default function JobsBoardPage() {
                 clientsMap[String(job.client_id ?? "")] || "Unknown client";
 
               return (
-                <button
+                <div
                   key={job.id}
-                  onClick={() => router.push(`/jobs/${job.id}`)}
-                  className="w-full text-left rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
+                  className="w-full rounded-xl border border-neutral-800 bg-neutral-900/40 px-3 py-2 mb-2 hover:bg-neutral-900/70 transition"
+                  draggable
+                  onDragStart={() => handleJobDragStart(job.id)}
                 >
-                  <div className="text-xs font-medium text-neutral-50">
-                    {job.title || `Job #${job.id}`}
-                  </div>
-                  <div className="text-[11px] text-neutral-400 mt-0.5">
-                    {clientName}
-                  </div>
-                  <div className="text-[11px] text-neutral-500 mt-1">
-                    Created {created}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => router.push(`/jobs/${job.id}`)}
+                    className="w-full text-left"
+                  >
+                    <div className="text-xs font-medium text-neutral-50">
+                      {job.title || `Job #${job.id}`}
+                    </div>
+                    <div className="text-[11px] text-neutral-400 mt-0.5">
+                      {clientName}
+                    </div>
+                    <div className="text-[11px] text-neutral-500 mt-1">
+                      Created {created}
+                    </div>
+                  </button>
+                </div>
               );
             })
           )}
@@ -351,13 +440,30 @@ function Column({
   title,
   itemsCount,
   children,
+  droppable,
+  onDrop,
+  onDragOver,
 }: {
   title: string;
   itemsCount: number;
   children: React.ReactNode;
+  droppable?: boolean;
+  onDrop?: () => void;
+  onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
 }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-3 min-h-[200px]">
+    <div
+      className="flex flex-col rounded-2xl border border-neutral-800 bg-neutral-900/40 p-3 min-h-[200px]"
+      onDragOver={droppable ? onDragOver : undefined}
+      onDrop={
+        droppable
+          ? (e) => {
+              e.preventDefault();
+              onDrop && onDrop();
+            }
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs font-semibold text-neutral-100 uppercase tracking-wide">
           {title}
